@@ -86,7 +86,12 @@ into the target container at run time:
 
 1. `docker exec <c> mkdir -p /tmp/dogger/<run-id>`
 2. `docker cp <task-dir>/. <c>:/tmp/dogger/<run-id>`
-3. `docker exec -w <container-working-dir> <c> bash /tmp/dogger/<run-id>/main.sh`
+3. `docker exec -w <container-working-dir> <c> sh -c '… exec bash main.sh
+   else exec sh main.sh …'`
+
+The runner prefers `bash` (the task template ships a bash shebang) but falls
+back to `sh` for minimal images such as Alpine that don't include `bash` — they
+would otherwise fail with `exec: "bash": executable file not found in $PATH`.
 
 `main.sh` is invoked with the project's configured container working directory
 (its codebase root) as the working directory, so scripts can assume they run

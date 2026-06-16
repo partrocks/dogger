@@ -208,7 +208,14 @@ pub fn run_task(
 
     // Where the task lands inside the container.
     let dest = format!("/tmp/dogger/{run_id}");
-    let command = format!("bash {dest}/main.sh");
+    // Prefer bash (the task template uses a bash shebang) but fall back to sh
+    // for minimal images (e.g. Alpine) that ship only a POSIX shell. The
+    // fallback runs inside `sh -c`, which every container is expected to have.
+    let script = format!("{dest}/main.sh");
+    let runner = format!(
+        "if command -v bash >/dev/null 2>&1; then exec bash {script}; else exec sh {script}; fi"
+    );
+    let command = format!("sh -c '{runner}'");
 
     let mut record = RunRecord {
         id: run_id.to_string(),
@@ -283,7 +290,7 @@ pub fn run_task(
         if !working_dir.is_empty() {
             cmd.args(["-w", &working_dir]);
         }
-        cmd.args([&container, "bash", &format!("{dest}/main.sh")]);
+        cmd.args([&container, "sh", "-c", &runner]);
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
