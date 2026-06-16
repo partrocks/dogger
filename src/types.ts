@@ -1,9 +1,9 @@
-// Core data model for Dogger (Phase 1).
+// Core data model for Dogger.
 //
-// These types describe the in-memory shape of a project and its tasks.
-// They are intentionally simple: Phase 1 only renders this structure in the
-// UI. Persistence (disk/SQLite) and real Docker execution come in later
-// iterations — see context/todo.md.
+// These types describe the shape of a project and its tasks as loaded from
+// disk (`~/.dogger`) via the Tauri commands in `src/api.ts`. They mirror the
+// Rust structs in `src-tauri/src/storage.rs`. Real Docker execution comes in a
+// later iteration — see context/todo.md.
 
 export interface DockerContainer {
   id: string;
@@ -33,8 +33,10 @@ export interface Task {
 export interface Project {
   id: string;
   name: string;
-  /** Local directory managed by Dogger that holds this project's tasks. */
+  /** Dogger-managed directory holding this project's tasks (`~/.dogger/<id>`). */
   projectDir: string;
+  /** Absolute path to the project's own (read-only) codebase, if configured. */
+  codebasePath: string;
   /** Working directory *inside* the container where tasks should execute. */
   containerWorkingDir: string;
   containers: DockerContainer[];

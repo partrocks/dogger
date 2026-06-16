@@ -81,5 +81,27 @@ rule (we never write into the project's codebase). `main.sh` is always invoked
 with the project's codebase root as the working directory inside the container,
 so scripts can assume they run from the root of the codebase.
 
+## 2026-06-16 — Persistence implemented in a Rust `storage` module
+All `~/.dogger` disk access lives in `src-tauri/src/storage.rs`, exposed to the
+frontend as Tauri commands (`list_projects`, `create_project`, `update_project`,
+`delete_project`, `create_task`, `delete_task`, `list_task_files`,
+`read_task_file`, `write_task_file`). The frontend never touches the filesystem
+directly — it goes through typed wrappers in `src/api.ts`. Project ids are
+slugified directory names (uniqued with `-2`, `-3`…); a task's `id`/`dir` is its
+folder name. All frontend-supplied ids/filenames are sanitised to a single safe
+path component to prevent traversal outside `~/.dogger`. The `dirs` crate
+resolves the home directory.
+
+## 2026-06-16 — `~/.dogger` is seeded with example projects on first run
+The first time `~/.dogger` is created it is seeded with the two former mock
+projects (Acme API, Marketing Site) so the app is browsable out of the box.
+`src/mockData.ts` was removed; data now comes only from disk.
+
+## 2026-06-16 — Container `running` is a temporary persisted mock
+Per the earlier decision, `running` should be derived from `docker ps` (Phase 2)
+and not stored. Until Phase 2 lands, `running` is persisted in `project.json`
+and exposed as a toggle in the container editor purely so the online/offline
+status feature stays demonstrable. To revisit when real Docker probing exists.
+
 ## Open questions
 - **Output streaming:** how to stream `main.sh` stdout/stderr live into the UI.

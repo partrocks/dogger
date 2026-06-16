@@ -12,15 +12,25 @@ Update this after each meaningful step.
 - [x] Define core data model in `src/types.ts` + mock data in `src/mockData.ts`.
 - [x] Verify `make dev` compiles the Rust backend and launches the desktop window.
 
-## Next iteration (Phase 1 continued)
-- [ ] Persist projects to disk as plain JSON under `~/.dogger` (decided — see
-      decisions.md). Create `~/.dogger` on first run if missing.
-- [ ] "New project" flow: create a managed `~/.dogger/<project-id>/` directory
-      with `project.json` (never write into the project's own codebase).
-- [ ] "New task" flow: scaffold `<task>/main.sh` with a starter template.
-- [ ] Read tasks from disk instead of `mockData.ts`.
-- [ ] Configure containers per project (add/remove, set working dir) in the UI.
-- [ ] Task detail view: list/edit files in the task directory.
+## Phase 1 continued (done)
+- [x] Persist projects to disk as plain JSON under `~/.dogger`. `~/.dogger` is
+      created on first run and seeded with example projects (Rust:
+      `src-tauri/src/storage.rs`).
+- [x] "New project" flow: creates a managed `~/.dogger/<project-id>/` directory
+      with `project.json` (never writes into the project's own codebase).
+- [x] "New task" flow: scaffolds `<task>/main.sh` (chmod +x) from a starter
+      template, plus `task.json`.
+- [x] Read projects/tasks from disk via Tauri commands instead of
+      `mockData.ts` (removed); frontend wrappers in `src/api.ts`.
+- [x] Configure containers per project (add/remove, set working dir, codebase
+      path) in the UI — `ProjectConfigEditor`.
+- [x] Task detail view: list and edit files in the task directory; save writes
+      back to disk (`main.sh` stays executable).
+
+## Next iteration (Phase 1 polish — optional)
+- [ ] Native file/folder pickers for codebase path (Tauri dialog plugin)
+      instead of free-text input.
+- [ ] Inline confirm dialogs instead of `window.confirm` / `window.prompt`.
 
 ## Phase 2 (Docker execution)
 - [ ] Startup check: probe for the Docker CLI/daemon; show a warning screen if
