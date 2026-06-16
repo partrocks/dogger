@@ -412,6 +412,8 @@ set -euo pipefail
 # Dogger task: __TASK_NAME__
 
 echo "Running task: __TASK_NAME__"
+
+echo "Done 🔥🔥🔥"
 "#;
 
 pub fn create_task(project_id: &str, name: &str, description: Option<&str>) -> Result<Task> {
