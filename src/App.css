@@ -174,6 +174,47 @@ body,
 
 .project-item-name {
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* ---- Status (derived from container running state) ---- */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--muted);
+}
+
+.status-dot--online {
+  background: #28c840;
+}
+
+.status-dot--offline {
+  background: #9aa0a6;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge--online {
+  background: rgba(40, 200, 64, 0.14);
+  color: #1f9b3a;
+}
+
+.status-badge--offline {
+  background: rgba(154, 160, 166, 0.18);
+  color: var(--muted);
 }
 
 .project-item-meta {
@@ -199,9 +240,21 @@ body,
   max-width: 760px;
 }
 
-.project-header h2 {
+.project-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0 0 16px;
+}
+
+.project-header h2 {
+  margin: 0;
   font-size: 22px;
+}
+
+.status-hint {
+  margin: -8px 0 20px;
+  font-size: 12px;
 }
 
 .project-config {
@@ -233,7 +286,9 @@ code {
 }
 
 .chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: var(--chip-bg);
   color: var(--chip-fg);
   border-radius: 999px;
@@ -241,6 +296,11 @@ code {
   font-size: 12px;
   font-weight: 500;
   margin-right: 6px;
+}
+
+.chip--offline {
+  background: rgba(154, 160, 166, 0.18);
+  color: var(--muted);
 }
 
 .section-head {

@@ -6,11 +6,11 @@ export const mockProjects: Project[] = [
   {
     id: "acme-api",
     name: "Acme API",
-    projectDir: "~/Dogger/acme-api",
+    projectDir: "~/.dogger/acme-api",
     containerWorkingDir: "/var/www/html",
     containers: [
-      { id: "php", name: "PHP / FPM", reference: "acme-api-php" },
-      { id: "db", name: "Postgres", reference: "acme-api-db" },
+      { id: "php", name: "PHP / FPM", reference: "acme-api-php", running: true },
+      { id: "db", name: "Postgres", reference: "acme-api-db", running: true },
     ],
     tasks: [
       {
@@ -30,9 +30,11 @@ export const mockProjects: Project[] = [
   {
     id: "marketing-site",
     name: "Marketing Site",
-    projectDir: "~/Dogger/marketing-site",
+    projectDir: "~/.dogger/marketing-site",
     containerWorkingDir: "/app",
-    containers: [{ id: "node", name: "Node 20", reference: "marketing-node" }],
+    containers: [
+      { id: "node", name: "Node 20", reference: "marketing-node", running: false },
+    ],
     tasks: [
       {
         id: "build",

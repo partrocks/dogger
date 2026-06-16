@@ -11,6 +11,11 @@ export interface DockerContainer {
   name: string;
   /** Container name or image reference used by `docker exec` later. */
   reference: string;
+  /**
+   * Whether this container is currently running on the host. At runtime this is
+   * derived from `docker ps`; in Phase 1 it is mocked.
+   */
+  running: boolean;
 }
 
 export interface Task {
@@ -34,4 +39,16 @@ export interface Project {
   containerWorkingDir: string;
   containers: DockerContainer[];
   tasks: Task[];
+}
+
+/**
+ * A project's status is derived from its containers, not stored:
+ * - `online`  — it has containers and every one of them is running.
+ * - `offline` — one or more containers are not running (or it has none).
+ */
+export type ProjectStatus = "online" | "offline";
+
+export function getProjectStatus(project: Project): ProjectStatus {
+  if (project.containers.length === 0) return "offline";
+  return project.containers.every((c) => c.running) ? "online" : "offline";
 }

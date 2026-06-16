@@ -13,16 +13,25 @@ Update this after each meaningful step.
 - [x] Verify `make dev` compiles the Rust backend and launches the desktop window.
 
 ## Next iteration (Phase 1 continued)
-- [ ] Persist projects to disk (decide JSON vs SQLite — see decisions.md).
-- [ ] "New project" flow: create a managed project directory.
+- [ ] Persist projects to disk as plain JSON under `~/.dogger` (decided — see
+      decisions.md). Create `~/.dogger` on first run if missing.
+- [ ] "New project" flow: create a managed `~/.dogger/<project-id>/` directory
+      with `project.json` (never write into the project's own codebase).
 - [ ] "New task" flow: scaffold `<task>/main.sh` with a starter template.
 - [ ] Read tasks from disk instead of `mockData.ts`.
 - [ ] Configure containers per project (add/remove, set working dir) in the UI.
 - [ ] Task detail view: list/edit files in the task directory.
 
 ## Phase 2 (Docker execution)
+- [ ] Startup check: probe for the Docker CLI/daemon; show a warning screen if
+      missing or unreachable.
+- [ ] Container selection lists only running containers via `docker ps`
+      (Dogger does not manage containers — see rules.md).
+- [ ] Before running a task, verify configured containers are running; warn
+      otherwise.
 - [ ] Rust command to run `main.sh` inside a container via `docker exec`.
-- [ ] Decide how the task dir is exposed to the container (mount/cp/volume).
+- [ ] Decide how the task dir is exposed to the container (bind mount vs
+      `docker cp`) — still open in decisions.md.
 - [ ] Stream stdout/stderr live into the UI; show exit code.
 - [ ] Per-task run history.
 

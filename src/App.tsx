@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Project, Task } from "./types";
+import { getProjectStatus } from "./types";
 import { mockProjects } from "./mockData";
 import "./App.css";
 
@@ -40,21 +41,30 @@ function App() {
         </div>
 
         <nav className="project-list">
-          {projects.map((project) => (
-            <button
-              key={project.id}
-              className={
-                "project-item" + (project.id === selectedId ? " is-active" : "")
-              }
-              onClick={() => setSelectedId(project.id)}
-            >
-              <span className="project-item-name">{project.name}</span>
-              <span className="project-item-meta">
-                {project.tasks.length} task
-                {project.tasks.length === 1 ? "" : "s"}
-              </span>
-            </button>
-          ))}
+          {projects.map((project) => {
+            const status = getProjectStatus(project);
+            return (
+              <button
+                key={project.id}
+                className={
+                  "project-item" + (project.id === selectedId ? " is-active" : "")
+                }
+                onClick={() => setSelectedId(project.id)}
+              >
+                <span className="project-item-name">
+                  <span
+                    className={"status-dot status-dot--" + status}
+                    title={status === "online" ? "Online" : "Offline"}
+                  />
+                  {project.name}
+                </span>
+                <span className="project-item-meta">
+                  {project.tasks.length} task
+                  {project.tasks.length === 1 ? "" : "s"}
+                </span>
+              </button>
+            );
+          })}
         </nav>
 
         <div className="sidebar-footer">Phase 1 · UI shell</div>
@@ -99,10 +109,23 @@ function Titlebar() {
 }
 
 function ProjectView({ project }: { project: Project }) {
+  const status = getProjectStatus(project);
   return (
     <div className="project-view">
       <header className="project-header">
-        <h2>{project.name}</h2>
+        <div className="project-title">
+          <h2>{project.name}</h2>
+          <span className={"status-badge status-badge--" + status}>
+            <span className={"status-dot status-dot--" + status} />
+            {status === "online" ? "Online" : "Offline"}
+          </span>
+        </div>
+        {status === "offline" && (
+          <p className="status-hint muted">
+            Some containers are not running. Start them on the host to bring this
+            project online.
+          </p>
+        )}
         <dl className="project-config">
           <div>
             <dt>Project directory</dt>
@@ -122,7 +145,21 @@ function ProjectView({ project }: { project: Project }) {
               {project.containers.length === 0
                 ? "—"
                 : project.containers.map((c) => (
-                    <span key={c.id} className="chip" title={c.reference}>
+                    <span
+                      key={c.id}
+                      className={
+                        "chip" + (c.running ? "" : " chip--offline")
+                      }
+                      title={
+                        c.reference + (c.running ? " (running)" : " (not running)")
+                      }
+                    >
+                      <span
+                        className={
+                          "status-dot status-dot--" +
+                          (c.running ? "online" : "offline")
+                        }
+                      />
                       {c.name}
                     </span>
                   ))}
