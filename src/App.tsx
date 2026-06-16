@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Project, Task } from "./types";
 import { mockProjects } from "./mockData";
 import "./App.css";
@@ -21,8 +22,10 @@ function App() {
   const selected = projects.find((p) => p.id === selectedId) ?? null;
 
   return (
-    <div className="app">
-      <aside className="sidebar">
+    <div className="window">
+      <Titlebar />
+      <div className="app">
+        <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark">◆</span>
           <h1 className="brand-name">Dogger</h1>
@@ -57,13 +60,40 @@ function App() {
         <div className="sidebar-footer">Phase 1 · UI shell</div>
       </aside>
 
-      <main className="main">
-        {selected ? (
-          <ProjectView project={selected} />
-        ) : (
-          <EmptyState />
-        )}
-      </main>
+        <main className="main">
+          {selected ? (
+            <ProjectView project={selected} />
+          ) : (
+            <EmptyState />
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function Titlebar() {
+  const appWindow = getCurrentWindow();
+
+  return (
+    <div className="titlebar" data-tauri-drag-region>
+      <div className="window-controls">
+        <button
+          className="win-btn win-close"
+          aria-label="Close"
+          onClick={() => appWindow.close()}
+        />
+        <button
+          className="win-btn win-min"
+          aria-label="Minimize"
+          onClick={() => appWindow.minimize()}
+        />
+        <button
+          className="win-btn win-max"
+          aria-label="Toggle maximize"
+          onClick={() => appWindow.toggleMaximize()}
+        />
+      </div>
     </div>
   );
 }

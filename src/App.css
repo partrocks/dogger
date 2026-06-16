@@ -31,9 +31,58 @@ body,
   height: 100%;
 }
 
+.window {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.titlebar {
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--sidebar-bg);
+  user-select: none;
+}
+
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.win-btn {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0.95;
+}
+
+.win-btn:hover {
+  opacity: 1;
+}
+
+.win-close {
+  background: #ff5f57;
+}
+
+.win-min {
+  background: #febc2e;
+}
+
+.win-max {
+  background: #28c840;
+}
+
 .app {
   display: flex;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
   background: var(--bg);
 }
 
