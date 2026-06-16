@@ -76,8 +76,11 @@ codebase (see `rules.md`).
 Run a task by executing its `main.sh` inside the chosen container:
 
 ```
-docker exec -w <containerWorkingDir> <container> bash <task-dir>/main.sh
+docker exec -w <containerWorkingDir> <container> sh -c 'exec <interp> <task-dir>/main.sh'
 ```
+
+`<interp>` is resolved per run by `docker::detect_shell` (probe the container's
+available shells + honour the script's shebang), not hard-coded to bash.
 
 The task directory lives in `~/.dogger/.../tasks/<task>` (outside the codebase).
 How it becomes visible to the container — bind mount vs `docker cp` — is the one

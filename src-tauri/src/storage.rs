@@ -337,10 +337,6 @@ const MAIN_SH_TEMPLATE: &str = r#"#!/usr/bin/env bash
 set -euo pipefail
 
 # Dogger task: __TASK_NAME__
-#
-# This script runs inside the project's running container via `docker exec`,
-# with the project's codebase root as the working directory. Edit it to do
-# whatever the task needs (run a command, a migration, a build step, etc).
 
 echo "Running task: __TASK_NAME__"
 "#;

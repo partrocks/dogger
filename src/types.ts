@@ -71,6 +71,22 @@ export interface RunningContainer {
   status: string;
 }
 
+/**
+ * What Dogger detected about how a task's `main.sh` will run inside a
+ * container: which shells exist there, the script's shebang, and the
+ * interpreter actually chosen. Mirrors `ShellInfo` in `src-tauri/src/docker.rs`.
+ */
+export interface ShellInfo {
+  /** Shells found on `PATH` inside the container. */
+  available: string[];
+  /** The interpreter Dogger will invoke (`bash`, `zsh`, `sh`, …). */
+  interpreter: string;
+  /** The raw shebang line parsed from `main.sh`, if present. */
+  shebang: string | null;
+  /** Coarse family of the chosen interpreter. */
+  family: "bash" | "zsh" | "posix";
+}
+
 export type RunStatus = "running" | "success" | "failed" | "error";
 
 export interface OutputLine {

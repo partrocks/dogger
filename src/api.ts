@@ -11,6 +11,7 @@ import type {
   Project,
   RunningContainer,
   RunRecord,
+  ShellInfo,
   Task,
 } from "./types";
 
@@ -98,6 +99,15 @@ export function dockerStatus(): Promise<DockerStatus> {
 
 export function listRunningContainers(): Promise<RunningContainer[]> {
   return invoke("list_running_containers");
+}
+
+/** Probe a container for the shell that will run a task's `main.sh`. */
+export function detectContainerShell(
+  projectId: string,
+  taskId: string,
+  container: string,
+): Promise<ShellInfo> {
+  return invoke("detect_container_shell", { projectId, taskId, container });
 }
 
 export function listRuns(

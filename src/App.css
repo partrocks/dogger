@@ -416,7 +416,26 @@ code {
 .header-actions {
   margin-left: auto;
   display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.shell-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: "SFMono-Regular", ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: var(--chip-fg);
+  background: var(--chip-bg);
+  border-radius: 8px;
+  padding: 5px 9px;
+  cursor: default;
+}
+
+.shell-indicator-icon {
+  opacity: 0.65;
+  font-weight: 600;
 }
 
 .primary-button {
@@ -484,8 +503,7 @@ code {
 }
 
 .field input:focus,
-.container-input:focus,
-.code-editor:focus {
+.container-input:focus {
   outline: none;
   border-color: var(--accent);
 }
@@ -643,6 +661,10 @@ code {
   background: var(--surface);
 }
 
+.file-content:focus-within {
+  border-color: var(--accent);
+}
+
 .file-content-head {
   display: flex;
   align-items: center;
@@ -651,17 +673,156 @@ code {
   border-bottom: 1px solid var(--border);
 }
 
-.code-editor {
+.file-content-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lang-badge {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  color: var(--muted);
+  background: rgba(127, 127, 127, 0.12);
+  border-radius: 6px;
+  padding: 3px 7px;
+}
+
+/* Scroll container for the (auto-growing) react-simple-code-editor. */
+.code-editor-wrap {
   flex: 1;
-  border: none;
-  resize: none;
-  padding: 12px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.code-editor {
+  min-height: 100%;
   font-family: "SFMono-Regular", ui-monospace, Menlo, monospace;
   font-size: 12.5px;
   line-height: 1.6;
-  background: transparent;
-  color: var(--text);
   tab-size: 2;
+  /* The textarea text is rendered transparent (the highlighted layer shows
+     through); this `color` drives the caret colour. */
+  color: var(--text);
+}
+
+.code-editor textarea {
+  outline: none;
+}
+
+/* ---- Prism tokens (tuned for the light editor surface) ---- */
+.code-editor .token.comment,
+.code-editor .token.prolog,
+.code-editor .token.doctype,
+.code-editor .token.cdata {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.code-editor .token.punctuation {
+  color: #6b7280;
+}
+
+.code-editor .token.keyword,
+.code-editor .token.atrule,
+.code-editor .token.important {
+  color: #8250df;
+}
+
+.code-editor .token.string,
+.code-editor .token.char,
+.code-editor .token.attr-value {
+  color: #0a7f3f;
+}
+
+.code-editor .token.number,
+.code-editor .token.boolean,
+.code-editor .token.constant,
+.code-editor .token.symbol {
+  color: #b5690a;
+}
+
+.code-editor .token.function,
+.code-editor .token.class-name,
+.code-editor .token.builtin {
+  color: #0550ae;
+}
+
+.code-editor .token.property,
+.code-editor .token.attr-name,
+.code-editor .token.tag {
+  color: #0550ae;
+}
+
+.code-editor .token.variable,
+.code-editor .token.regex {
+  color: #953800;
+}
+
+.code-editor .token.operator,
+.code-editor .token.entity,
+.code-editor .token.url {
+  color: #6b7280;
+  background: none;
+}
+
+/* On the dark editor surface the light-theme token colours look dim, so use a
+   brighter, higher-contrast palette there. */
+@media (prefers-color-scheme: dark) {
+  .code-editor .token.comment,
+  .code-editor .token.prolog,
+  .code-editor .token.doctype,
+  .code-editor .token.cdata {
+    color: #8b98a8;
+  }
+
+  .code-editor .token.punctuation {
+    color: #c2cad6;
+  }
+
+  .code-editor .token.keyword,
+  .code-editor .token.atrule,
+  .code-editor .token.important {
+    color: #d6a3ff;
+  }
+
+  .code-editor .token.string,
+  .code-editor .token.char,
+  .code-editor .token.attr-value {
+    color: #8ddb9b;
+  }
+
+  .code-editor .token.number,
+  .code-editor .token.boolean,
+  .code-editor .token.constant,
+  .code-editor .token.symbol {
+    color: #ffb454;
+  }
+
+  .code-editor .token.function,
+  .code-editor .token.class-name,
+  .code-editor .token.builtin {
+    color: #6cb6ff;
+  }
+
+  .code-editor .token.property,
+  .code-editor .token.attr-name,
+  .code-editor .token.tag {
+    color: #79c0ff;
+  }
+
+  .code-editor .token.variable,
+  .code-editor .token.regex {
+    color: #ff9d73;
+  }
+
+  .code-editor .token.operator,
+  .code-editor .token.entity,
+  .code-editor .token.url {
+    color: #56cfd6;
+  }
 }
 
 /* ---- Modal ---- */

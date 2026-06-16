@@ -53,6 +53,16 @@ Update this after each meaningful step.
 - [x] Per-task run history (persisted under `tasks/<task>/.runs/`; `list_runs`;
       `RunHistory`).
 
+## Phase 2 polish — done
+- [x] Detect the container's shell instead of guessing bash/sh: probe the
+      container for available shells (`bash`/`zsh`/`sh`/`ash`/`dash`/`ksh`) and
+      honour `main.sh`'s shebang, falling back to the best shell present
+      (`docker::detect_shell`; `detect_container_shell` command). The resolved
+      interpreter is shown in the task header before running.
+- [x] Syntax highlighting in the task file editor (Prism via
+      `react-simple-code-editor`): shell, JSON, JS/TS, PHP, YAML, Markdown,
+      picked by file extension (`src/highlight.ts`).
+
 ## Phase 3 (AI — not started)
 - [ ] Generate/edit tasks from natural language.
 - [ ] Summarise run output and suggest fixes.

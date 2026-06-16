@@ -153,6 +153,27 @@ plain editable input so paths can still be typed/pasted. Replaced
 in-app `ConfirmDialog` and `PromptDialog` components built on the existing
 `Modal`, used for delete-project, delete-task, and add-task-file flows.
 
+## 2026-06-16 — Shell is detected, not guessed
+The runner previously hard-coded "bash, else sh". It now resolves the
+interpreter per run: `detect_shell` probes the container (`command -v` over
+`bash`/`zsh`/`sh`/`ash`/`dash`/`ksh`) and reads `main.sh`'s shebang. If the
+shebang's shell is installed it wins (so `#!/bin/zsh` is honoured); otherwise
+Dogger picks the best shell actually present, with `sh` as the last resort. The
+exec stays `docker exec [-w wd] <c> sh -c 'exec <interp> <script>'`. A
+`detect_container_shell` command lets the UI show the chosen interpreter (with
+the shebang and available shells in its tooltip) on the task screen before
+running. `set -euo pipefail` still lives in the `main.sh` template — strict mode
+is the script's concern, and shell options don't survive into a child
+interpreter anyway, so we did not move it into the exec line.
+
+## 2026-06-16 — Syntax highlighting in the file editor
+The task file editor uses `react-simple-code-editor` + Prism instead of a plain
+`<textarea>`. Language is chosen by file extension in `src/highlight.ts` (shell,
+JSON, JS/TS, PHP, YAML, Markdown; unknown types fall back to escaped plain
+text). Token colours are defined in `App.css` scoped to `.code-editor` (tuned
+for the light surface) rather than importing a Prism theme, because our `<pre>`
+carries no `language-*` class for a stock theme to target.
+
 ## Open questions
 - (resolved) **Output streaming:** stream `main.sh` stdout/stderr live into the
   UI — done via Tauri events in Phase 2 (see above).

@@ -5,7 +5,7 @@
 mod docker;
 mod storage;
 
-use docker::{DockerStatus, RunningContainer};
+use docker::{DockerStatus, RunningContainer, ShellInfo};
 use storage::{DockerContainer, Project, RunRecord, Task};
 
 #[tauri::command]
@@ -89,6 +89,15 @@ fn list_running_containers() -> Result<Vec<RunningContainer>, String> {
 }
 
 #[tauri::command]
+fn detect_container_shell(
+    project_id: String,
+    task_id: String,
+    container: String,
+) -> Result<ShellInfo, String> {
+    docker::detect_container_shell(&project_id, &task_id, &container)
+}
+
+#[tauri::command]
 fn list_runs(project_id: String, task_id: String) -> Result<Vec<RunRecord>, String> {
     storage::list_runs(&project_id, &task_id)
 }
@@ -121,6 +130,7 @@ pub fn run() {
             write_task_file,
             docker_status,
             list_running_containers,
+            detect_container_shell,
             list_runs,
             run_task,
         ])

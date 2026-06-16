@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import Editor from "react-simple-code-editor";
 import type {
   DockerContainer,
   DockerStatus,
@@ -10,10 +11,12 @@ import type {
   RunningContainer,
   RunRecord,
   RunStatus,
+  ShellInfo,
   Task,
 } from "./types";
 import { getProjectStatus, matchesRunning } from "./types";
 import * as api from "./api";
+import { highlightCode, languageLabel } from "./highlight";
 import "./App.css";
 
 // Dogger UI, backed by on-disk state under `~/.dogger` (via the Rust commands
@@ -801,6 +804,7 @@ function TaskDetail({
   const [addFileOpen, setAddFileOpen] = useState(false);
   const [runs, setRuns] = useState<RunRecord[]>([]);
   const [target, setTarget] = useState("");
+  const [shell, setShell] = useState<ShellInfo | null>(null);
   const [activeRun, setActiveRun] = useState<{
     container: string;
     runId: string;
@@ -822,6 +826,23 @@ function TaskDetail({
   useEffect(() => {
     loadRuns();
   }, [loadRuns]);
+
+  // Probe the target container so we can show which shell will actually run
+  // `main.sh` (honouring its shebang) instead of leaving the user guessing.
+  useEffect(() => {
+    if (!dockerReady || !effectiveTarget) {
+      setShell(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .detectContainerShell(project.id, task.id, effectiveTarget)
+      .then((s) => !cancelled && setShell(s))
+      .catch(() => !cancelled && setShell(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [dockerReady, effectiveTarget, project.id, task.id]);
 
   function startRun() {
     if (!effectiveTarget) return;
@@ -916,6 +937,21 @@ function TaskDetail({
       <div className="project-title">
         <h2>{task.name}</h2>
         <div className="header-actions">
+          {shell && (
+            <span
+              className="shell-indicator"
+              title={
+                `main.sh runs with ${shell.interpreter}` +
+                (shell.shebang ? ` · shebang #!${shell.shebang}` : "") +
+                (shell.available.length
+                  ? ` · available: ${shell.available.join(", ")}`
+                  : "")
+              }
+            >
+              <span className="shell-indicator-icon">$</span>
+              {shell.interpreter}
+            </span>
+          )}
           {runnable.length > 1 && (
             <select
               className="container-select"
@@ -991,23 +1027,34 @@ function TaskDetail({
             <>
               <div className="file-content-head">
                 <code>{activeFile}</code>
-                <button
-                  className="primary-button"
-                  onClick={save}
-                  disabled={busy || !dirty}
-                >
-                  {busy ? "Saving…" : dirty ? "Save" : "Saved"}
-                </button>
+                <div className="file-content-head-actions">
+                  {languageLabel(activeFile) && (
+                    <span className="lang-badge">
+                      {languageLabel(activeFile)}
+                    </span>
+                  )}
+                  <button
+                    className="primary-button"
+                    onClick={save}
+                    disabled={busy || !dirty}
+                  >
+                    {busy ? "Saving…" : dirty ? "Save" : "Saved"}
+                  </button>
+                </div>
               </div>
-              <textarea
-                className="code-editor"
-                spellCheck={false}
-                value={contents}
-                onChange={(e) => {
-                  setContents(e.target.value);
-                  setDirty(true);
-                }}
-              />
+              <div className="code-editor-wrap">
+                <Editor
+                  className="code-editor"
+                  value={contents}
+                  onValueChange={(code) => {
+                    setContents(code);
+                    setDirty(true);
+                  }}
+                  highlight={(code) => highlightCode(code, activeFile)}
+                  padding={12}
+                  tabSize={2}
+                />
+              </div>
             </>
           ) : (
             <div className="empty-state">
