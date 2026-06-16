@@ -73,8 +73,13 @@ is **offline**. This status is computed (from `docker ps` at runtime; mocked in
 Phase 1), never stored. Offline projects can't run tasks. Implemented as
 `getProjectStatus()` in `src/types.ts`, surfaced as a dot/badge in the UI.
 
+## 2026-06-16 — Task dir reaches the container via bind mount
+At run time the task directory (`~/.dogger/.../tasks/<task>`) is bind-mounted
+into the running container, rather than copied in with `docker cp`. This keeps
+task content outside the project's own mounted volume, upholding the read-only
+rule (we never write into the project's codebase). `main.sh` is always invoked
+with the project's codebase root as the working directory inside the container,
+so scripts can assume they run from the root of the codebase.
+
 ## Open questions
-- **How does the task dir reach the container** at run time: bind mount the
-  `~/.dogger/.../tasks/<task>` dir, or `docker cp` it in? (The read-only rule
-  means we must not rely on writing into the project's mounted volume.)
 - **Output streaming:** how to stream `main.sh` stdout/stderr live into the UI.
