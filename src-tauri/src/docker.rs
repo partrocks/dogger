@@ -332,6 +332,73 @@ pub fn detect_container_shell(
     Ok(detect_shell(container, &main_sh))
 }
 
+/// True when `b` would make an adjacent filename part of a larger token — so a
+/// match there is *not* a standalone reference to that file. Covers word chars,
+/// a path separator, a dot or dash (sibling/extension), and any non-ASCII byte.
+fn extends_token(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_' || b == b'/' || b == b'.' || b == b'-' || b >= 0x80
+}
+
+/// Rewrite bare or `./`-prefixed references to any of `resources` into
+/// `"$DOGGER_TASK_DIR/<name>"`.
+///
+/// Conservative on purpose: a filename is only rewritten when it stands alone as
+/// a token (not embedded in a longer path or word), so with a resource `foo.php`
+/// the references `foo.php` and `./foo.php` are rewritten while `vendor/foo.php`
+/// and `foobar.php` are left as-is. Longer resource names take precedence over
+/// shorter ones. The input is never mutated; the result feeds a throwaway
+/// in-container copy of `main.sh`.
+fn rewrite_resource_refs(script: &str, resources: &[String]) -> String {
+    let mut names: Vec<&str> = resources
+        .iter()
+        .map(String::as_str)
+        .filter(|s| !s.is_empty())
+        .collect();
+    // Longest first so e.g. `seed.php.bak` is matched before `seed.php`.
+    names.sort_by(|a, b| b.len().cmp(&a.len()));
+
+    let bytes = script.as_bytes();
+    let mut out = String::with_capacity(script.len());
+    let mut i = 0;
+    while i < script.len() {
+        let rest = &script[i..];
+        let mut matched = false;
+        for name in &names {
+            // A reference is the filename, optionally prefixed with `./`, with
+            // either form beginning at the current position.
+            let ref_len = if let Some(after_dot) = rest.strip_prefix("./") {
+                if after_dot.starts_with(name) {
+                    2 + name.len()
+                } else {
+                    continue;
+                }
+            } else if rest.starts_with(name) {
+                name.len()
+            } else {
+                continue;
+            };
+
+            let lead_ok = i == 0 || !extends_token(bytes[i - 1]);
+            let after = i + ref_len;
+            let trail_ok = after >= bytes.len() || !extends_token(bytes[after]);
+            if lead_ok && trail_ok {
+                out.push_str("\"$DOGGER_TASK_DIR/");
+                out.push_str(name);
+                out.push('"');
+                i = after;
+                matched = true;
+                break;
+            }
+        }
+        if !matched {
+            let ch = rest.chars().next().unwrap();
+            out.push(ch);
+            i += ch.len_utf8();
+        }
+    }
+    out
+}
+
 /// Start a task run inside `container`. The heavy lifting (copy + exec +
 /// streaming) happens on a background thread; this returns once the run record
 /// has been created so the caller gets the run id immediately. Progress is
@@ -367,6 +434,20 @@ pub fn run_task(
     let dest = format!("/tmp/dogger/{run_id}");
     let script = format!("{dest}/main.sh");
 
+    // Materialize a rewritten copy of `main.sh` for the container: bare or
+    // `./`-prefixed references to the task's own resource files are turned into
+    // `"$DOGGER_TASK_DIR/<file>"` so they resolve from the copied task dir no
+    // matter the working directory. The source `main.sh` is never modified —
+    // only this throwaway in-container copy is.
+    let resources: Vec<String> = storage::list_task_files(project_id, task_id)?
+        .into_iter()
+        .filter(|f| f != "main.sh")
+        .collect();
+    let original_script =
+        fs::read_to_string(&main_sh_host).map_err(|e| format!("read main.sh: {e}"))?;
+    let materialized_script = rewrite_resource_refs(&original_script, &resources);
+    let script_rewritten = materialized_script != original_script;
+
     // Pick the interpreter by probing the container's available shells and the
     // script's shebang rather than blindly guessing bash/sh — this honours
     // `#!/bin/zsh` etc. and degrades to whatever shell the image actually has.
@@ -377,7 +458,12 @@ pub fn run_task(
     } else {
         format!(" -w {working_dir}")
     };
-    let command = format!("docker exec{wd_display} {container} sh -c '{runner}'");
+    // Expose the task's copied location as an env var. This both backs the
+    // rewritten resource references above and lets hand-written scripts use
+    // `"$DOGGER_TASK_DIR/foo.php"` directly.
+    let task_dir_env = format!("DOGGER_TASK_DIR={dest}");
+    let command =
+        format!("docker exec{wd_display} -e {task_dir_env} {container} sh -c '{runner}'");
 
     let mut record = RunRecord {
         id: run_id.to_string(),
@@ -427,6 +513,21 @@ pub fn run_task(
                 &format!("{task_dir}/."),
                 &format!("{container}:{dest}"),
             ]))?;
+            // Overwrite the copied main.sh with the rewritten version (the source
+            // on disk stays untouched; only this in-container copy changes).
+            if script_rewritten {
+                let tmp = std::env::temp_dir().join(format!("dogger-{run_id}-main.sh"));
+                fs::write(&tmp, &materialized_script)
+                    .map_err(|e| format!("stage rewritten main.sh: {e}"))?;
+                let tmp_str = tmp.to_string_lossy().to_string();
+                let cp = run_quiet(Command::new("docker").args([
+                    "cp",
+                    &tmp_str,
+                    &format!("{container}:{script}"),
+                ]));
+                let _ = fs::remove_file(&tmp);
+                cp?;
+            }
             Ok(())
         })();
 
@@ -452,6 +553,7 @@ pub fn run_task(
         if !working_dir.is_empty() {
             cmd.args(["-w", &working_dir]);
         }
+        cmd.args(["-e", &task_dir_env]);
         cmd.args([&container, "sh", "-c", &runner]);
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
@@ -605,4 +707,62 @@ fn existing_started_at(project_id: &str, task_id: &str, run_id: &str) -> i64 {
         .and_then(|runs| runs.into_iter().find(|r| r.id == run_id))
         .map(|r| r.started_at)
         .unwrap_or_else(now_millis)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::rewrite_resource_refs;
+
+    fn res(names: &[&str]) -> Vec<String> {
+        names.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn rewrites_dot_slash_reference() {
+        let out = rewrite_resource_refs("php ./seed.php\n", &res(&["seed.php"]));
+        assert_eq!(out, "php \"$DOGGER_TASK_DIR/seed.php\"\n");
+    }
+
+    #[test]
+    fn rewrites_bare_reference() {
+        let out = rewrite_resource_refs("php seed.php\n", &res(&["seed.php"]));
+        assert_eq!(out, "php \"$DOGGER_TASK_DIR/seed.php\"\n");
+    }
+
+    #[test]
+    fn leaves_path_prefixed_reference_untouched() {
+        let script = "php vendor/seed.php\n";
+        assert_eq!(rewrite_resource_refs(script, &res(&["seed.php"])), script);
+    }
+
+    #[test]
+    fn leaves_substring_of_longer_name_untouched() {
+        // Resource `seed.php` must not match inside `seed.php.bak` or `xseed.php`.
+        let script = "php seed.php.bak\ncat xseed.php\n";
+        assert_eq!(rewrite_resource_refs(script, &res(&["seed.php"])), script);
+    }
+
+    #[test]
+    fn longer_name_wins() {
+        let out = rewrite_resource_refs(
+            "cat ./seed.php.bak\n",
+            &res(&["seed.php", "seed.php.bak"]),
+        );
+        assert_eq!(out, "cat \"$DOGGER_TASK_DIR/seed.php.bak\"\n");
+    }
+
+    #[test]
+    fn rewrites_multiple_refs_on_one_line() {
+        let out = rewrite_resource_refs("cp a.txt b.txt\n", &res(&["a.txt", "b.txt"]));
+        assert_eq!(
+            out,
+            "cp \"$DOGGER_TASK_DIR/a.txt\" \"$DOGGER_TASK_DIR/b.txt\"\n"
+        );
+    }
+
+    #[test]
+    fn no_resources_is_identity() {
+        let script = "php ./seed.php\n";
+        assert_eq!(rewrite_resource_refs(script, &[]), script);
+    }
 }

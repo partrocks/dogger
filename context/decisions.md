@@ -210,6 +210,26 @@ round-trip across display scale factors. Frequent drag-time events are throttled
 (~400ms), with a forced save on close to capture the final geometry. A missing
 or corrupt config is non-fatal — the `tauri.conf.json` defaults stay in place.
 
+## 2026-06-16 — `$DOGGER_TASK_DIR` + auto-rewrite of resource references
+Because `main.sh` runs with the *codebase root* as its working directory (not
+the temp dir the task is copied into), relative references to sibling resources
+like `php ./seed.php` fail with `Could not open input file`. Two cooperating
+mechanisms fix this, neither of which touches the source `main.sh`:
+
+1. `run_task` injects `-e DOGGER_TASK_DIR=/tmp/dogger/<run-id>` on the
+   `docker exec` so hand-written scripts can use `"$DOGGER_TASK_DIR/<file>"`.
+2. At run time Dogger **materializes a rewritten copy** of `main.sh`: bare or
+   `./`-prefixed references to the task's own resource files (everything in the
+   task dir except `main.sh`) are rewritten to `"$DOGGER_TASK_DIR/<file>"`. The
+   rewrite (`rewrite_resource_refs`) is conservative — it only fires when the
+   filename stands alone as a token, so `vendor/foo.php` / `foobar.php` are left
+   untouched when the resource is `foo.php`; longer names win over shorter ones.
+
+The source file on disk is never modified: the rewritten text is written to a
+host temp file and `docker cp`-ed over the (already copied) `main.sh` inside the
+container, so only the throwaway in-container copy differs. The user therefore
+writes plain `php ./seed.php` and it "just works".
+
 ## Open questions
 - (resolved) **Output streaming:** stream `main.sh` stdout/stderr live into the
   UI — done via Tauri events in Phase 2 (see above).
