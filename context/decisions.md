@@ -103,5 +103,14 @@ and not stored. Until Phase 2 lands, `running` is persisted in `project.json`
 and exposed as a toggle in the container editor purely so the online/offline
 status feature stays demonstrable. To revisit when real Docker probing exists.
 
+## 2026-06-16 — Phase 1 polish: native folder picker + inline dialogs
+Added the `tauri-plugin-dialog` plugin (JS `@tauri-apps/plugin-dialog`, Rust
+`tauri-plugin-dialog`, `dialog:default` capability) so the codebase path can be
+chosen with a native folder picker via a "Browse…" button; the field stays a
+plain editable input so paths can still be typed/pasted. Replaced
+`window.confirm`/`window.prompt` (unreliable/ugly inside the webview) with
+in-app `ConfirmDialog` and `PromptDialog` components built on the existing
+`Modal`, used for delete-project, delete-task, and add-task-file flows.
+
 ## Open questions
 - **Output streaming:** how to stream `main.sh` stdout/stderr live into the UI.

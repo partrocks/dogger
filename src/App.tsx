@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import type { DockerContainer, Project, Task } from "./types";
 import { getProjectStatus } from "./types";
 import * as api from "./api";
@@ -175,6 +176,7 @@ function ProjectView({
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [newTaskOpen, setNewTaskOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -238,11 +240,7 @@ function ProjectView({
             <button
               className="ghost-button ghost-button--danger"
               disabled={busy}
-              onClick={async () => {
-                if (!confirmDelete(`Delete project "${project.name}"?`)) return;
-                await run(() => api.deleteProject(project.id));
-                onDeleted();
-              }}
+              onClick={() => setConfirmDeleteOpen(true)}
             >
               Delete
             </button>
@@ -339,6 +337,34 @@ function ProjectView({
             if (created) {
               setNewTaskOpen(false);
               onChanged(project.id);
+            }
+          }}
+        />
+      )}
+
+      {confirmDeleteOpen && (
+        <ConfirmDialog
+          title="Delete project"
+          message={
+            <>
+              Delete project <strong>{project.name}</strong>? This removes its
+              managed directory and all of its tasks. The project's own codebase
+              is not touched.
+            </>
+          }
+          confirmLabel="Delete project"
+          busy={busy}
+          onCancel={() => setConfirmDeleteOpen(false)}
+          onConfirm={async () => {
+            setBusy(true);
+            setErr(null);
+            try {
+              await api.deleteProject(project.id);
+              onDeleted();
+            } catch (e) {
+              setErr(String(e));
+              setBusy(false);
+              setConfirmDeleteOpen(false);
             }
           }}
         />
@@ -442,14 +468,11 @@ function ProjectConfigEditor({
           <span className="field-label">Name</span>
           <input value={name} onChange={(e) => setName(e.target.value)} />
         </label>
-        <label className="field">
-          <span className="field-label">Codebase path (read-only source)</span>
-          <input
-            value={codebasePath}
-            placeholder="/Users/you/code/my-project"
-            onChange={(e) => setCodebasePath(e.target.value)}
-          />
-        </label>
+        <CodebasePathField
+          label="Codebase path (read-only source)"
+          value={codebasePath}
+          onChange={setCodebasePath}
+        />
         <label className="field">
           <span className="field-label">Container working directory</span>
           <input
@@ -542,6 +565,8 @@ function TaskDetail({
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [addFileOpen, setAddFileOpen] = useState(false);
 
   const loadFiles = useCallback(
     async (preferFile?: string) => {
@@ -600,14 +625,15 @@ function TaskDetail({
     }
   }
 
-  async function addFile() {
-    const name = window.prompt("New file name (e.g. helper.php)");
+  async function addFile(rawName: string) {
+    const name = rawName.trim();
     if (!name) return;
     setBusy(true);
     setErr(null);
     try {
-      await api.writeTaskFile(project.id, task.id, name.trim(), "");
-      await loadFiles(name.trim());
+      await api.writeTaskFile(project.id, task.id, name, "");
+      setAddFileOpen(false);
+      await loadFiles(name);
     } catch (e) {
       setErr(String(e));
     } finally {
@@ -630,17 +656,7 @@ function TaskDetail({
           <button
             className="ghost-button ghost-button--danger"
             disabled={busy}
-            onClick={async () => {
-              if (!confirmDelete(`Delete task "${task.name}"?`)) return;
-              setBusy(true);
-              try {
-                await api.deleteTask(project.id, task.id);
-                onDeleted();
-              } catch (e) {
-                setErr(String(e));
-                setBusy(false);
-              }
-            }}
+            onClick={() => setConfirmDeleteOpen(true)}
           >
             Delete task
           </button>
@@ -656,7 +672,7 @@ function TaskDetail({
             <button
               className="icon-button icon-button--light"
               title="New file"
-              onClick={addFile}
+              onClick={() => setAddFileOpen(true)}
             >
               +
             </button>
@@ -709,6 +725,45 @@ function TaskDetail({
           )}
         </div>
       </div>
+
+      {addFileOpen && (
+        <PromptDialog
+          title="New file"
+          label="File name"
+          placeholder="helper.php"
+          confirmLabel="Create file"
+          busy={busy}
+          onCancel={() => setAddFileOpen(false)}
+          onConfirm={addFile}
+        />
+      )}
+
+      {confirmDeleteOpen && (
+        <ConfirmDialog
+          title="Delete task"
+          message={
+            <>
+              Delete task <strong>{task.name}</strong>? This removes its
+              directory and all of its files.
+            </>
+          }
+          confirmLabel="Delete task"
+          busy={busy}
+          onCancel={() => setConfirmDeleteOpen(false)}
+          onConfirm={async () => {
+            setBusy(true);
+            setErr(null);
+            try {
+              await api.deleteTask(project.id, task.id);
+              onDeleted();
+            } catch (e) {
+              setErr(String(e));
+              setBusy(false);
+              setConfirmDeleteOpen(false);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -761,14 +816,11 @@ function NewProjectDialog({
           onChange={(e) => setName(e.target.value)}
         />
       </label>
-      <label className="field">
-        <span className="field-label">Codebase path (optional)</span>
-        <input
-          value={codebasePath}
-          placeholder="/Users/you/code/my-project"
-          onChange={(e) => setCodebasePath(e.target.value)}
-        />
-      </label>
+      <CodebasePathField
+        label="Codebase path (optional)"
+        value={codebasePath}
+        onChange={setCodebasePath}
+      />
       <label className="field">
         <span className="field-label">Container working directory</span>
         <input
@@ -899,10 +951,129 @@ function EmptyState({ onNew }: { onNew: () => void }) {
   );
 }
 
-// Lightweight confirm that works inside the Tauri webview without relying on a
-// native dialog plugin.
-function confirmDelete(message: string): boolean {
-  return window.confirm(message);
+// Codebase path input paired with a native folder picker (Tauri dialog
+// plugin). The path stays editable by hand; "Browse…" just fills it in.
+function CodebasePathField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  async function browse() {
+    const selected = await openDialog({
+      directory: true,
+      multiple: false,
+      title: "Select codebase folder",
+      defaultPath: value || undefined,
+    });
+    if (typeof selected === "string") onChange(selected);
+  }
+
+  return (
+    <label className="field">
+      <span className="field-label">{label}</span>
+      <div className="path-input">
+        <input
+          value={value}
+          placeholder="/Users/you/code/my-project"
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <button type="button" className="ghost-button" onClick={browse}>
+          Browse…
+        </button>
+      </div>
+    </label>
+  );
+}
+
+// Inline confirmation dialog, replacing window.confirm so it matches the app's
+// look and works reliably inside the Tauri webview.
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  message: ReactNode;
+  confirmLabel: string;
+  busy?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Modal title={title} onClose={onCancel}>
+      <p className="modal-hint">{message}</p>
+      <div className="form-actions">
+        <button className="ghost-button" onClick={onCancel} disabled={busy}>
+          Cancel
+        </button>
+        <button
+          className="primary-button primary-button--danger"
+          onClick={onConfirm}
+          disabled={busy}
+        >
+          {busy ? "Working…" : confirmLabel}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// Inline single-field prompt, replacing window.prompt.
+function PromptDialog({
+  title,
+  label,
+  placeholder,
+  confirmLabel,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  label: string;
+  placeholder?: string;
+  confirmLabel: string;
+  busy?: boolean;
+  onCancel: () => void;
+  onConfirm: (value: string) => void;
+}) {
+  const [value, setValue] = useState("");
+  const trimmed = value.trim();
+
+  return (
+    <Modal title={title} onClose={onCancel}>
+      <label className="field">
+        <span className="field-label">{label}</span>
+        <input
+          autoFocus
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && trimmed && !busy) onConfirm(trimmed);
+          }}
+        />
+      </label>
+      <div className="form-actions">
+        <button className="ghost-button" onClick={onCancel} disabled={busy}>
+          Cancel
+        </button>
+        <button
+          className="primary-button"
+          onClick={() => onConfirm(trimmed)}
+          disabled={busy || !trimmed}
+        >
+          {busy ? "Working…" : confirmLabel}
+        </button>
+      </div>
+    </Modal>
+  );
 }
 
 export default App;

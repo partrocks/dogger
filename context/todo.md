@@ -27,10 +27,13 @@ Update this after each meaningful step.
 - [x] Task detail view: list and edit files in the task directory; save writes
       back to disk (`main.sh` stays executable).
 
-## Next iteration (Phase 1 polish — optional)
-- [ ] Native file/folder pickers for codebase path (Tauri dialog plugin)
-      instead of free-text input.
-- [ ] Inline confirm dialogs instead of `window.confirm` / `window.prompt`.
+## Phase 1 polish (done)
+- [x] Native folder picker for codebase path (Tauri dialog plugin) alongside
+      the editable text input — `CodebasePathField` in `src/App.tsx`, used by
+      both the new-project and configure-project flows.
+- [x] Inline confirm/prompt dialogs instead of `window.confirm` /
+      `window.prompt` — `ConfirmDialog` (delete project/task) and `PromptDialog`
+      (add task file) in `src/App.tsx`.
 
 ## Phase 2 (Docker execution)
 - [ ] Startup check: probe for the Docker CLI/daemon; show a warning screen if

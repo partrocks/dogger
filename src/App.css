@@ -497,6 +497,21 @@ code {
   margin-top: 8px;
 }
 
+.path-input {
+  display: flex;
+  gap: 8px;
+}
+
+.path-input input {
+  flex: 1;
+  min-width: 0;
+}
+
+.primary-button--danger {
+  border-color: #c0392b;
+  background: #c0392b;
+}
+
 .section-head--spaced {
   margin-top: 8px;
 }
