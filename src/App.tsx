@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ReactNode, RefObject } from "react";
+import type { MouseEvent, ReactNode, RefObject } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import Editor from "react-simple-code-editor";
@@ -240,8 +240,22 @@ function App() {
 function Titlebar() {
   const appWindow = getCurrentWindow();
 
+  // `data-tauri-drag-region` alone is unreliable in the Tauri v2 webview, so we
+  // also start the native drag explicitly on mousedown. We ignore the press
+  // when it lands on an interactive control (the traffic-light buttons).
+  function handleDragMouseDown(e: MouseEvent<HTMLDivElement>) {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest("button")) return;
+    void appWindow.startDragging();
+  }
+
   return (
-    <div className="titlebar" data-tauri-drag-region>
+    <div
+      className="titlebar"
+      data-tauri-drag-region
+      onMouseDown={handleDragMouseDown}
+      onDoubleClick={() => void appWindow.toggleMaximize()}
+    >
       <div className="window-controls">
         <button
           className="win-btn win-close"
