@@ -22,16 +22,15 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-/// A container the project attaches to. `running` is a Phase-1 mock toggle; in
-/// Phase 2 it will be derived from `docker ps` rather than persisted.
+/// A legacy multi-container entry. Projects now attach to a single container
+/// (see `ProjectFile::container`); this type is kept only so older
+/// `project.json` files that still carry a `containers` array can be read and
+/// migrated. It is never written back out.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DockerContainer {
-    pub id: String,
-    pub name: String,
-    pub reference: String,
+pub struct LegacyContainer {
     #[serde(default)]
-    pub running: bool,
+    pub reference: String,
 }
 
 /// The persisted shape of `project.json`. The project id is the directory name
@@ -44,8 +43,14 @@ pub struct ProjectFile {
     pub codebase_path: String,
     #[serde(default)]
     pub container_working_dir: String,
+    /// Reference (name/id/image) of the single container tasks run in. Empty
+    /// when the project has no container configured yet.
     #[serde(default)]
-    pub containers: Vec<DockerContainer>,
+    pub container: String,
+    /// Legacy multi-container config. Read for migration only; `skip_serializing`
+    /// keeps it out of any file Dogger writes.
+    #[serde(default, skip_serializing)]
+    pub containers: Vec<LegacyContainer>,
 }
 
 /// The persisted shape of `task.json`.
@@ -109,7 +114,8 @@ pub struct Project {
     /// Absolute path of the project's own (read-only) codebase, if configured.
     pub codebase_path: String,
     pub container_working_dir: String,
-    pub containers: Vec<DockerContainer>,
+    /// Reference of the container this project runs tasks in (empty if unset).
+    pub container: String,
     pub tasks: Vec<Task>,
 }
 
@@ -231,13 +237,25 @@ pub fn load_project(id: &str) -> Result<Project> {
     let dir = project_dir(id)?;
     let file: ProjectFile = read_json(&dir.join("project.json"))?;
     let tasks = list_tasks(id)?;
+    // Prefer the new single-container field; fall back to the first reference in
+    // any legacy `containers` array so existing projects keep working.
+    let container = if !file.container.trim().is_empty() {
+        file.container.trim().to_string()
+    } else {
+        file.containers
+            .iter()
+            .map(|c| c.reference.trim())
+            .find(|r| !r.is_empty())
+            .unwrap_or_default()
+            .to_string()
+    };
     Ok(Project {
         id: id.to_string(),
         name: file.name,
         project_dir: dir.to_string_lossy().to_string(),
         codebase_path: file.codebase_path,
         container_working_dir: file.container_working_dir,
-        containers: file.containers,
+        container,
         tasks,
     })
 }
@@ -278,6 +296,7 @@ pub fn create_project(
     name: &str,
     codebase_path: &str,
     container_working_dir: &str,
+    container: &str,
 ) -> Result<Project> {
     let root = dogger_home()?;
     if name.trim().is_empty() {
@@ -296,6 +315,7 @@ pub fn create_project(
         name: name.trim().to_string(),
         codebase_path: codebase_path.trim().to_string(),
         container_working_dir: working_dir,
+        container: container.trim().to_string(),
         containers: Vec::new(),
     };
     write_json(&dir.join("project.json"), &file)?;
@@ -303,13 +323,13 @@ pub fn create_project(
 }
 
 /// Persist edits to a project's config (name, codebase path, working dir,
-/// containers). Tasks are managed separately and left untouched.
+/// container). Tasks are managed separately and left untouched.
 pub fn update_project(
     id: &str,
     name: &str,
     codebase_path: &str,
     container_working_dir: &str,
-    containers: Vec<DockerContainer>,
+    container: &str,
 ) -> Result<Project> {
     let dir = project_dir(id)?;
     if !dir.join("project.json").exists() {
@@ -319,7 +339,8 @@ pub fn update_project(
         name: name.trim().to_string(),
         codebase_path: codebase_path.trim().to_string(),
         container_working_dir: container_working_dir.trim().to_string(),
-        containers,
+        container: container.trim().to_string(),
+        containers: Vec::new(),
     };
     write_json(&dir.join("project.json"), &file)?;
     load_project(id)
@@ -479,20 +500,8 @@ fn seed_examples(root: &Path) {
                 name: "Acme API".to_string(),
                 codebase_path: String::new(),
                 container_working_dir: "/var/www/html".to_string(),
-                containers: vec![
-                    DockerContainer {
-                        id: "php".to_string(),
-                        name: "PHP / FPM".to_string(),
-                        reference: "acme-api-php".to_string(),
-                        running: true,
-                    },
-                    DockerContainer {
-                        id: "db".to_string(),
-                        name: "Postgres".to_string(),
-                        reference: "acme-api-db".to_string(),
-                        running: true,
-                    },
-                ],
+                container: "acme-api-php".to_string(),
+                containers: Vec::new(),
             })
             .unwrap_or_default(),
         )?;
@@ -518,12 +527,8 @@ fn seed_examples(root: &Path) {
                 name: "Marketing Site".to_string(),
                 codebase_path: String::new(),
                 container_working_dir: "/app".to_string(),
-                containers: vec![DockerContainer {
-                    id: "node".to_string(),
-                    name: "Node 20".to_string(),
-                    reference: "marketing-node".to_string(),
-                    running: false,
-                }],
+                container: "marketing-node".to_string(),
+                containers: Vec::new(),
             })
             .unwrap_or_default(),
         )?;

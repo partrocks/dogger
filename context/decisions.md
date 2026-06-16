@@ -174,6 +174,28 @@ text). Token colours are defined in `App.css` scoped to `.code-editor` (tuned
 for the light surface) rather than importing a Prism theme, because our `<pre>`
 carries no `language-*` class for a stock theme to target.
 
+## 2026-06-16 — One container per project (multi-container removed)
+The multi-container-per-project model was dropped: it was confusing and rarely
+useful. A project now attaches to a single container, stored as a `container`
+reference string on `project.json` (replacing the `containers[]` array).
+`ProjectFile` keeps a `#[serde(skip_serializing)]` legacy `containers` field so
+existing project files still load — `load_project` migrates by taking the first
+non-empty `reference` — but Dogger never writes `containers` back. Frontend:
+`Project.container: string`, `getProjectStatus(project, running)` is online only
+when that container matches a running one. The per-task container `<select>`
+dropdowns in `TaskRow`/`TaskDetail` are gone; runs always target the project's
+container. The `DockerContainer` type was removed from `src/types.ts`.
+
+## 2026-06-16 — Container chosen in the New Project form, with path validation
+The New Project form now picks a container up front (and Configure shares the
+same `ContainerField` component): a `<select>` of live `docker ps` containers
+(Rule 3) with a manual-entry fallback when Docker is down / none are running.
+After choosing a container, the container working directory is validated against
+it via a new `check_container_path` command (`docker exec <c> test -d <path>`,
+run directly so the path needs no shell quoting). The form shows a live
+exists/not-found indicator and blocks create/save when the path is missing
+(only when a container is selected and Docker is reachable).
+
 ## Open questions
 - (resolved) **Output streaming:** stream `main.sh` stdout/stderr live into the
   UI — done via Tauri events in Phase 2 (see above).

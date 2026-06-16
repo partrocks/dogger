@@ -5,19 +5,6 @@
 // Rust structs in `src-tauri/src/storage.rs`. Real Docker execution comes in a
 // later iteration — see context/todo.md.
 
-export interface DockerContainer {
-  id: string;
-  /** Human-friendly label shown in the UI. */
-  name: string;
-  /** Container name or image reference used by `docker exec` later. */
-  reference: string;
-  /**
-   * Whether this container is currently running on the host. At runtime this is
-   * derived from `docker ps`; in Phase 1 it is mocked.
-   */
-  running: boolean;
-}
-
 export interface Task {
   id: string;
   name: string;
@@ -39,20 +26,28 @@ export interface Project {
   codebasePath: string;
   /** Working directory *inside* the container where tasks should execute. */
   containerWorkingDir: string;
-  containers: DockerContainer[];
+  /**
+   * Reference (name/id/image) of the single container this project runs tasks
+   * in. Empty when no container has been configured yet.
+   */
+  container: string;
   tasks: Task[];
 }
 
 /**
- * A project's status is derived from its containers, not stored:
- * - `online`  — it has containers and every one of them is running.
- * - `offline` — one or more containers are not running (or it has none).
+ * A project's status is derived from its container, not stored:
+ * - `online`  — it has a container and that container is currently running.
+ * - `offline` — no container configured, or it isn't running (or Docker is
+ *   unavailable so we can't confirm it).
  */
 export type ProjectStatus = "online" | "offline";
 
-export function getProjectStatus(project: Project): ProjectStatus {
-  if (project.containers.length === 0) return "offline";
-  return project.containers.every((c) => c.running) ? "online" : "offline";
+export function getProjectStatus(
+  project: Project,
+  running: RunningContainer[] | null,
+): ProjectStatus {
+  if (!project.container || !running) return "offline";
+  return matchesRunning(project.container, running) ? "online" : "offline";
 }
 
 /** Result of probing the local Docker CLI/daemon (Phase 2). */

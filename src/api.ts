@@ -6,7 +6,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type {
-  DockerContainer,
   DockerStatus,
   Project,
   RunningContainer,
@@ -23,11 +22,13 @@ export function createProject(input: {
   name: string;
   codebasePath?: string;
   containerWorkingDir?: string;
+  container?: string;
 }): Promise<Project> {
   return invoke("create_project", {
     name: input.name,
     codebasePath: input.codebasePath ?? "",
     containerWorkingDir: input.containerWorkingDir ?? "",
+    container: input.container ?? "",
   });
 }
 
@@ -36,14 +37,14 @@ export function updateProject(input: {
   name: string;
   codebasePath: string;
   containerWorkingDir: string;
-  containers: DockerContainer[];
+  container: string;
 }): Promise<Project> {
   return invoke("update_project", {
     id: input.id,
     name: input.name,
     codebasePath: input.codebasePath,
     containerWorkingDir: input.containerWorkingDir,
-    containers: input.containers,
+    container: input.container,
   });
 }
 
@@ -99,6 +100,18 @@ export function dockerStatus(): Promise<DockerStatus> {
 
 export function listRunningContainers(): Promise<RunningContainer[]> {
   return invoke("list_running_containers");
+}
+
+/**
+ * Check whether `path` exists as a directory inside `container`. Rejects when
+ * the container isn't running, so callers can distinguish "not running" from
+ * "path missing".
+ */
+export function checkContainerPath(
+  container: string,
+  path: string,
+): Promise<boolean> {
+  return invoke("check_container_path", { container, path });
 }
 
 /** Probe a container for the shell that will run a task's `main.sh`. */

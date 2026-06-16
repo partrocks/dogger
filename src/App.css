@@ -902,6 +902,35 @@ code {
   max-width: 160px;
 }
 
+.container-select--full {
+  max-width: none;
+  width: 100%;
+  padding: 9px 10px;
+  font-size: 13px;
+}
+
+/* ---- Working-directory path validation hint ---- */
+.path-check {
+  margin-top: 6px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.path-check--checking {
+  color: var(--muted);
+}
+
+.path-check--ok {
+  color: #1f9b3a;
+}
+
+.path-check--missing,
+.path-check--error {
+  color: #d23b3b;
+}
+
 .run-button {
   font-weight: 600;
 }

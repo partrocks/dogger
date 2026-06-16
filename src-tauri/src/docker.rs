@@ -178,6 +178,31 @@ pub fn is_container_running(reference: &str) -> bool {
         .unwrap_or(false)
 }
 
+/// Check whether `path` exists as a directory inside a running container.
+/// Used by the project forms to validate the configured working directory
+/// before a project is created/saved. Errors when the container isn't running
+/// so the UI can tell "not running" apart from "path missing".
+pub fn check_path(container: &str, path: &str) -> Result<bool, String> {
+    let container = container.trim();
+    let path = path.trim();
+    if container.is_empty() {
+        return Err("no container selected".to_string());
+    }
+    if path.is_empty() {
+        return Err("no path specified".to_string());
+    }
+    if !is_container_running(container) {
+        return Err(format!("container '{container}' is not running"));
+    }
+    // `test -d` is run directly (no `sh -c`) so the path is passed as a single
+    // argument and never needs shell quoting.
+    let output = Command::new("docker")
+        .args(["exec", container, "test", "-d", path])
+        .output()
+        .map_err(|e| format!("failed to run docker exec: {e}"))?;
+    Ok(output.status.success())
+}
+
 /// Shells Dogger probes for inside a container, in rough preference order
 /// (used both for detection and as the fallback ranking when a script's
 /// shebang shell isn't installed).

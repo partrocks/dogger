@@ -32,14 +32,15 @@ dogger/
 
 See `src/types.ts`. Held in memory only for now.
 
-- `Project { id, name, projectDir, containerWorkingDir, containers[], tasks[] }`
+- `Project { id, name, projectDir, codebasePath, containerWorkingDir, container, tasks[] }`
 - `Task { id, name, dir, description? }` — `dir` resolves to a folder containing
   `main.sh`.
-- `DockerContainer { id, name, reference, running }` — `reference` is the docker
-  container/image used by `docker exec` later; `running` reflects host state.
-- **Project status is derived, not stored:** `getProjectStatus(project)` returns
-  `online` only when the project has containers and all are running, else
-  `offline`. (Runtime: from `docker ps`; mocked in Phase 1.)
+- `container` is a single reference (name/id/image) used by `docker exec`; a
+  project attaches to exactly one container (the earlier multi-container model
+  was removed). Empty when none is configured yet.
+- **Project status is derived, not stored:** `getProjectStatus(project, running)`
+  returns `online` only when the project's `container` is currently running
+  (matched against live `docker ps`), else `offline`.
 
 ## Storage layout (decided)
 

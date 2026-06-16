@@ -4,7 +4,6 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import Editor from "react-simple-code-editor";
 import type {
-  DockerContainer,
   DockerStatus,
   OutputLine,
   Project,
@@ -27,28 +26,15 @@ import "./App.css";
 // inside a running container via `docker cp` + `docker exec`, streaming output
 // into the UI.
 
-// Resolve a project's containers' `running` flags against the live `docker ps`
-// result. When Docker is unavailable (`running === null`) we fall back to the
-// persisted (mock) flag so the app stays browsable.
-function resolveContainers(
+// Whether a project's single configured container is currently running. When
+// Docker is unavailable (`running === null`) we can't confirm it, so treat it
+// as not running.
+function isProjectContainerRunning(
   project: Project,
   running: RunningContainer[] | null,
-): DockerContainer[] {
-  if (!running) return project.containers;
-  return project.containers.map((c) => ({
-    ...c,
-    running: matchesRunning(c.reference, running),
-  }));
-}
-
-function projectStatusFor(
-  project: Project,
-  running: RunningContainer[] | null,
-): ReturnType<typeof getProjectStatus> {
-  return getProjectStatus({
-    ...project,
-    containers: resolveContainers(project, running),
-  });
+): boolean {
+  if (!project.container || !running) return false;
+  return matchesRunning(project.container, running);
 }
 
 function App() {
@@ -140,6 +126,7 @@ function App() {
     name: string;
     codebasePath: string;
     containerWorkingDir: string;
+    container: string;
   }) {
     const created = await api.createProject(input);
     setNewProjectOpen(false);
@@ -169,7 +156,7 @@ function App() {
 
           <nav className="project-list">
             {projects.map((project) => {
-              const status = projectStatusFor(project, running);
+              const status = getProjectStatus(project, running);
               return (
                 <button
                   key={project.id}
@@ -240,6 +227,8 @@ function App() {
 
       {newProjectOpen && (
         <NewProjectDialog
+          running={running}
+          dockerReady={!!docker?.daemonRunning}
           onCancel={() => setNewProjectOpen(false)}
           onCreate={handleCreateProject}
         />
@@ -299,8 +288,8 @@ function ProjectView({
     runId: string;
   } | null>(null);
 
-  const resolvedContainers = resolveContainers(project, running);
-  const status = projectStatusFor(project, running);
+  const containerRunning = isProjectContainerRunning(project, running);
+  const status = getProjectStatus(project, running);
   const openTask = project.tasks.find((t) => t.id === openTaskId) ?? null;
 
   function startRun(task: Task, container: string) {
@@ -329,7 +318,7 @@ function ProjectView({
       <TaskDetail
         project={project}
         task={openTask}
-        containers={resolvedContainers}
+        containerRunning={containerRunning}
         dockerReady={dockerReady}
         onClose={() => setOpenTaskId(null)}
         onDeleted={() => {
@@ -345,6 +334,7 @@ function ProjectView({
       <ProjectConfigEditor
         project={project}
         running={running}
+        dockerReady={dockerReady}
         onCancel={() => setEditing(false)}
         onSaved={() => {
           setEditing(false);
@@ -379,8 +369,9 @@ function ProjectView({
         </div>
         {status === "offline" && (
           <p className="status-hint muted">
-            Some containers are not running. Start them on the host to bring this
-            project online.
+            {project.container
+              ? "The project's container isn't running. Start it on the host to bring this project online."
+              : "No container configured. Add one in Configure to run tasks."}
           </p>
         )}
         <dl className="project-config">
@@ -407,28 +398,26 @@ function ProjectView({
             </dd>
           </div>
           <div>
-            <dt>Containers</dt>
+            <dt>Container</dt>
             <dd>
-              {resolvedContainers.length === 0 ? (
+              {!project.container ? (
                 <span className="muted">None configured</span>
               ) : (
-                resolvedContainers.map((c) => (
+                <span
+                  className={"chip" + (containerRunning ? "" : " chip--offline")}
+                  title={
+                    project.container +
+                    (containerRunning ? " (running)" : " (not running)")
+                  }
+                >
                   <span
-                    key={c.id}
-                    className={"chip" + (c.running ? "" : " chip--offline")}
-                    title={
-                      c.reference + (c.running ? " (running)" : " (not running)")
+                    className={
+                      "status-dot status-dot--" +
+                      (containerRunning ? "online" : "offline")
                     }
-                  >
-                    <span
-                      className={
-                        "status-dot status-dot--" +
-                        (c.running ? "online" : "offline")
-                      }
-                    />
-                    {c.name}
-                  </span>
-                ))
+                  />
+                  {project.container}
+                </span>
               )}
             </dd>
           </div>
@@ -451,7 +440,8 @@ function ProjectView({
               <TaskRow
                 key={task.id}
                 task={task}
-                containers={resolvedContainers}
+                container={project.container}
+                containerRunning={containerRunning}
                 dockerReady={dockerReady}
                 onOpen={() => setOpenTaskId(task.id)}
                 onRun={(container) => startRun(task, container)}
@@ -520,30 +510,27 @@ function ProjectView({
 
 function TaskRow({
   task,
-  containers,
+  container,
+  containerRunning,
   dockerReady,
   onOpen,
   onRun,
 }: {
   task: Task;
-  containers: DockerContainer[];
+  container: string;
+  containerRunning: boolean;
   dockerReady: boolean;
   onOpen: () => void;
   onRun: (container: string) => void;
 }) {
-  const runnable = containers.filter((c) => c.running);
-  const [target, setTarget] = useState("");
-  const effectiveTarget =
-    runnable.find((c) => c.reference === target)?.reference ??
-    runnable[0]?.reference ??
-    "";
-
-  const disabled = !dockerReady || runnable.length === 0;
+  const disabled = !dockerReady || !container || !containerRunning;
   const title = !dockerReady
     ? "Docker is unavailable"
-    : runnable.length === 0
-      ? "No running container for this project"
-      : `Run in ${effectiveTarget}`;
+    : !container
+      ? "No container configured for this project"
+      : !containerRunning
+        ? `Container ${container} is not running`
+        : `Run in ${container}`;
 
   return (
     <li className="task-row">
@@ -555,25 +542,11 @@ function TaskRow({
         )}
       </button>
       <div className="task-run-controls">
-        {runnable.length > 1 && (
-          <select
-            className="container-select"
-            value={effectiveTarget}
-            onChange={(e) => setTarget(e.target.value)}
-            title="Target container"
-          >
-            {runnable.map((c) => (
-              <option key={c.id} value={c.reference}>
-                {c.name || c.reference}
-              </option>
-            ))}
-          </select>
-        )}
         <button
           className="run-button"
           disabled={disabled}
           title={title}
-          onClick={() => onRun(effectiveTarget)}
+          onClick={() => onRun(container)}
         >
           ▶ Run
         </button>
@@ -585,75 +558,47 @@ function TaskRow({
 function ProjectConfigEditor({
   project,
   running,
+  dockerReady,
   onCancel,
   onSaved,
 }: {
   project: Project;
   running: RunningContainer[] | null;
+  dockerReady: boolean;
   onCancel: () => void;
   onSaved: () => void;
 }) {
   const [name, setName] = useState(project.name);
   const [codebasePath, setCodebasePath] = useState(project.codebasePath);
   const [workingDir, setWorkingDir] = useState(project.containerWorkingDir);
-  const [containers, setContainers] = useState<DockerContainer[]>(
-    project.containers,
-  );
+  const [container, setContainer] = useState(project.container);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-
-  function addContainer() {
-    const id = "c" + Math.random().toString(36).slice(2, 8);
-    setContainers((cs) => [
-      ...cs,
-      { id, name: "", reference: "", running: false },
-    ]);
-  }
-
-  function addRunningContainer(rc: RunningContainer) {
-    const id = "c" + Math.random().toString(36).slice(2, 8);
-    setContainers((cs) =>
-      cs.some((c) => c.reference === rc.name)
-        ? cs
-        : [
-            ...cs,
-            {
-              id,
-              name: rc.name,
-              reference: rc.name,
-              running: true,
-            },
-          ],
-    );
-  }
-
-  function updateContainer(id: string, patch: Partial<DockerContainer>) {
-    setContainers((cs) =>
-      cs.map((c) => (c.id === id ? { ...c, ...patch } : c)),
-    );
-  }
-
-  function removeContainer(id: string) {
-    setContainers((cs) => cs.filter((c) => c.id !== id));
-  }
 
   async function save() {
     setBusy(true);
     setErr(null);
     try {
-      const cleaned = containers
-        .map((c) => ({
-          ...c,
-          name: c.name.trim() || c.reference.trim(),
-          reference: c.reference.trim(),
-        }))
-        .filter((c) => c.reference.length > 0);
+      if (container.trim() && workingDir.trim() && dockerReady) {
+        const ok = await api
+          .checkContainerPath(container.trim(), workingDir.trim())
+          .catch((e) => {
+            throw new Error(String(e));
+          });
+        if (!ok) {
+          setErr(
+            `"${workingDir.trim()}" was not found in ${container.trim()}.`,
+          );
+          setBusy(false);
+          return;
+        }
+      }
       await api.updateProject({
         id: project.id,
         name: name.trim() || project.name,
         codebasePath: codebasePath.trim(),
         containerWorkingDir: workingDir.trim(),
-        containers: cleaned,
+        container: container.trim(),
       });
       onSaved();
     } catch (e) {
@@ -680,92 +625,15 @@ function ProjectConfigEditor({
           value={codebasePath}
           onChange={setCodebasePath}
         />
-        <label className="field">
-          <span className="field-label">Container working directory</span>
-          <input
-            value={workingDir}
-            placeholder="/app"
-            onChange={(e) => setWorkingDir(e.target.value)}
-          />
-        </label>
+        <ContainerField
+          running={running}
+          dockerReady={dockerReady}
+          container={container}
+          onContainerChange={setContainer}
+          workingDir={workingDir}
+          onWorkingDirChange={setWorkingDir}
+        />
       </div>
-
-      <div className="section-head section-head--spaced">
-        <h3>Containers</h3>
-        <button className="ghost-button" onClick={addContainer}>
-          Add manually
-        </button>
-      </div>
-      <p className="muted container-hint">
-        A container reference is matched live against running containers
-        (`docker ps`). The persisted “running” flag is only a fallback for when
-        Docker is unavailable.
-      </p>
-
-      {running && running.length > 0 && (
-        <div className="running-picker">
-          <span className="field-label">Add a running container:</span>
-          <div className="running-picker-list">
-            {running.map((rc) => {
-              const already = containers.some((c) => c.reference === rc.name);
-              return (
-                <button
-                  key={rc.id}
-                  className="chip chip--button"
-                  disabled={already}
-                  title={`${rc.image} · ${rc.status}`}
-                  onClick={() => addRunningContainer(rc)}
-                >
-                  <span className="status-dot status-dot--online" />
-                  {rc.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {containers.length === 0 ? (
-        <p className="muted">No containers configured.</p>
-      ) : (
-        <ul className="container-editor">
-          {containers.map((c) => (
-            <li key={c.id} className="container-editor-row">
-              <input
-                className="container-input"
-                placeholder="Label (e.g. Postgres)"
-                value={c.name}
-                onChange={(e) => updateContainer(c.id, { name: e.target.value })}
-              />
-              <input
-                className="container-input"
-                placeholder="Container name / ref"
-                value={c.reference}
-                onChange={(e) =>
-                  updateContainer(c.id, { reference: e.target.value })
-                }
-              />
-              <label className="running-toggle">
-                <input
-                  type="checkbox"
-                  checked={c.running}
-                  onChange={(e) =>
-                    updateContainer(c.id, { running: e.target.checked })
-                  }
-                />
-                running
-              </label>
-              <button
-                className="icon-button icon-button--light"
-                title="Remove container"
-                onClick={() => removeContainer(c.id)}
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
 
       <div className="form-actions">
         <button className="ghost-button" onClick={onCancel} disabled={busy}>
@@ -782,14 +650,14 @@ function ProjectConfigEditor({
 function TaskDetail({
   project,
   task,
-  containers,
+  containerRunning,
   dockerReady,
   onClose,
   onDeleted,
 }: {
   project: Project;
   task: Task;
-  containers: DockerContainer[];
+  containerRunning: boolean;
   dockerReady: boolean;
   onClose: () => void;
   onDeleted: () => void;
@@ -803,18 +671,17 @@ function TaskDetail({
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [addFileOpen, setAddFileOpen] = useState(false);
   const [runs, setRuns] = useState<RunRecord[]>([]);
-  const [target, setTarget] = useState("");
   const [shell, setShell] = useState<ShellInfo | null>(null);
   const [activeRun, setActiveRun] = useState<{
     container: string;
     runId: string;
   } | null>(null);
 
-  const runnable = containers.filter((c) => c.running);
-  const effectiveTarget =
-    runnable.find((c) => c.reference === target)?.reference ??
-    runnable[0]?.reference ??
-    "";
+  // The project runs tasks in a single container; it's a valid run target only
+  // when Docker is reachable and that container is currently running.
+  const container = project.container;
+  const canRun = dockerReady && !!container && containerRunning;
+  const effectiveTarget = canRun ? container : "";
 
   const loadRuns = useCallback(() => {
     api
@@ -952,29 +819,17 @@ function TaskDetail({
               {shell.interpreter}
             </span>
           )}
-          {runnable.length > 1 && (
-            <select
-              className="container-select"
-              value={effectiveTarget}
-              onChange={(e) => setTarget(e.target.value)}
-              title="Target container"
-            >
-              {runnable.map((c) => (
-                <option key={c.id} value={c.reference}>
-                  {c.name || c.reference}
-                </option>
-              ))}
-            </select>
-          )}
           <button
             className="primary-button"
-            disabled={!dockerReady || runnable.length === 0}
+            disabled={!canRun}
             title={
               !dockerReady
                 ? "Docker is unavailable"
-                : runnable.length === 0
-                  ? "No running container for this project"
-                  : `Run in ${effectiveTarget}`
+                : !container
+                  ? "No container configured for this project"
+                  : !containerRunning
+                    ? `Container ${container} is not running`
+                    : `Run in ${container}`
             }
             onClick={startRun}
           >
@@ -1121,19 +976,25 @@ function TaskDetail({
 }
 
 function NewProjectDialog({
+  running,
+  dockerReady,
   onCancel,
   onCreate,
 }: {
+  running: RunningContainer[] | null;
+  dockerReady: boolean;
   onCancel: () => void;
   onCreate: (input: {
     name: string;
     codebasePath: string;
     containerWorkingDir: string;
+    container: string;
   }) => Promise<void>;
 }) {
   const [name, setName] = useState("");
   const [codebasePath, setCodebasePath] = useState("");
   const [workingDir, setWorkingDir] = useState("/app");
+  const [container, setContainer] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -1145,10 +1006,27 @@ function NewProjectDialog({
     setBusy(true);
     setErr(null);
     try {
+      // When a running container is chosen, confirm the working directory
+      // actually exists in it before creating the project.
+      if (container.trim() && workingDir.trim() && dockerReady) {
+        const ok = await api
+          .checkContainerPath(container.trim(), workingDir.trim())
+          .catch((e) => {
+            throw new Error(String(e));
+          });
+        if (!ok) {
+          setErr(
+            `"${workingDir.trim()}" was not found in ${container.trim()}.`,
+          );
+          setBusy(false);
+          return;
+        }
+      }
       await onCreate({
         name: name.trim(),
         codebasePath: codebasePath.trim(),
         containerWorkingDir: workingDir.trim(),
+        container: container.trim(),
       });
     } catch (e) {
       setErr(String(e));
@@ -1173,14 +1051,14 @@ function NewProjectDialog({
         value={codebasePath}
         onChange={setCodebasePath}
       />
-      <label className="field">
-        <span className="field-label">Container working directory</span>
-        <input
-          value={workingDir}
-          placeholder="/app"
-          onChange={(e) => setWorkingDir(e.target.value)}
-        />
-      </label>
+      <ContainerField
+        running={running}
+        dockerReady={dockerReady}
+        container={container}
+        onContainerChange={setContainer}
+        workingDir={workingDir}
+        onWorkingDirChange={setWorkingDir}
+      />
       <div className="form-actions">
         <button className="ghost-button" onClick={onCancel} disabled={busy}>
           Cancel
@@ -1338,6 +1216,151 @@ function CodebasePathField({
         </button>
       </div>
     </label>
+  );
+}
+
+// Container picker + working-directory input, shared by the new-project and
+// configure-project forms. The container is chosen from the live `docker ps`
+// list (Rule 3: only running containers), with a manual-entry fallback for when
+// Docker is unavailable. The working directory is validated against the chosen
+// container so a bad path is caught before the project is saved.
+type PathCheck = "idle" | "checking" | "ok" | "missing" | "error";
+
+function ContainerField({
+  running,
+  dockerReady,
+  container,
+  onContainerChange,
+  workingDir,
+  onWorkingDirChange,
+}: {
+  running: RunningContainer[] | null;
+  dockerReady: boolean;
+  container: string;
+  onContainerChange: (value: string) => void;
+  workingDir: string;
+  onWorkingDirChange: (value: string) => void;
+}) {
+  const runningList = running ?? [];
+  const hasRunning = runningList.length > 0;
+  const runningNames = runningList.map((rc) => rc.name);
+  // Manual entry kicks in when there are no running containers to pick from, or
+  // when the configured reference isn't one of them (e.g. typed by hand).
+  const [manual, setManual] = useState(
+    container !== "" && !runningNames.includes(container),
+  );
+
+  const [check, setCheck] = useState<PathCheck>("idle");
+  const [checkMsg, setCheckMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const c = container.trim();
+    const wd = workingDir.trim();
+    if (!dockerReady || !c || !wd) {
+      setCheck("idle");
+      setCheckMsg(null);
+      return;
+    }
+    let cancelled = false;
+    setCheck("checking");
+    setCheckMsg(null);
+    const handle = setTimeout(() => {
+      api
+        .checkContainerPath(c, wd)
+        .then((ok) => {
+          if (!cancelled) setCheck(ok ? "ok" : "missing");
+        })
+        .catch((e) => {
+          if (!cancelled) {
+            setCheck("error");
+            setCheckMsg(String(e));
+          }
+        });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [dockerReady, container, workingDir]);
+
+  function onSelect(value: string) {
+    if (value === "__custom__") {
+      setManual(true);
+      onContainerChange("");
+    } else {
+      setManual(false);
+      onContainerChange(value);
+    }
+  }
+
+  const useManual = manual || !hasRunning;
+  const selectValue = runningNames.includes(container) ? container : "";
+
+  return (
+    <>
+      <label className="field">
+        <span className="field-label">Container</span>
+        {useManual ? (
+          <div className="path-input">
+            <input
+              value={container}
+              placeholder="Container name / ref"
+              onChange={(e) => onContainerChange(e.target.value)}
+            />
+            {hasRunning && (
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => {
+                  setManual(false);
+                  onContainerChange("");
+                }}
+              >
+                Pick running
+              </button>
+            )}
+          </div>
+        ) : (
+          <select
+            className="container-select container-select--full"
+            value={selectValue}
+            onChange={(e) => onSelect(e.target.value)}
+          >
+            <option value="">Select a running container…</option>
+            {runningList.map((rc) => (
+              <option key={rc.id} value={rc.name}>
+                {rc.name} · {rc.image}
+              </option>
+            ))}
+            <option value="__custom__">Enter manually…</option>
+          </select>
+        )}
+        {!hasRunning && (
+          <span className="muted container-hint">
+            {dockerReady
+              ? "No running containers detected — enter a reference manually."
+              : "Docker is unavailable — enter a container reference manually."}
+          </span>
+        )}
+      </label>
+
+      <label className="field">
+        <span className="field-label">Container working directory</span>
+        <input
+          value={workingDir}
+          placeholder="/app"
+          onChange={(e) => onWorkingDirChange(e.target.value)}
+        />
+        {container.trim() && workingDir.trim() && check !== "idle" && (
+          <span className={"path-check path-check--" + check}>
+            {check === "checking" && "Checking path…"}
+            {check === "ok" && "✓ Path exists in the container"}
+            {check === "missing" && "✗ Path not found in the container"}
+            {check === "error" && (checkMsg ?? "Couldn't verify path")}
+          </span>
+        )}
+      </label>
+    </>
   );
 }
 

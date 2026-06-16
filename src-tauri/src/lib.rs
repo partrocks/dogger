@@ -6,7 +6,7 @@ mod docker;
 mod storage;
 
 use docker::{DockerStatus, RunningContainer, ShellInfo};
-use storage::{DockerContainer, Project, RunRecord, Task};
+use storage::{Project, RunRecord, Task};
 
 #[tauri::command]
 fn list_projects() -> Result<Vec<Project>, String> {
@@ -18,8 +18,9 @@ fn create_project(
     name: String,
     codebase_path: String,
     container_working_dir: String,
+    container: String,
 ) -> Result<Project, String> {
-    storage::create_project(&name, &codebase_path, &container_working_dir)
+    storage::create_project(&name, &codebase_path, &container_working_dir, &container)
 }
 
 #[tauri::command]
@@ -28,14 +29,14 @@ fn update_project(
     name: String,
     codebase_path: String,
     container_working_dir: String,
-    containers: Vec<DockerContainer>,
+    container: String,
 ) -> Result<Project, String> {
     storage::update_project(
         &id,
         &name,
         &codebase_path,
         &container_working_dir,
-        containers,
+        &container,
     )
 }
 
@@ -89,6 +90,11 @@ fn list_running_containers() -> Result<Vec<RunningContainer>, String> {
 }
 
 #[tauri::command]
+fn check_container_path(container: String, path: String) -> Result<bool, String> {
+    docker::check_path(&container, &path)
+}
+
+#[tauri::command]
 fn detect_container_shell(
     project_id: String,
     task_id: String,
@@ -130,6 +136,7 @@ pub fn run() {
             write_task_file,
             docker_status,
             list_running_containers,
+            check_container_path,
             detect_container_shell,
             list_runs,
             run_task,

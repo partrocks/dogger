@@ -63,6 +63,16 @@ Update this after each meaningful step.
       `react-simple-code-editor`): shell, JSON, JS/TS, PHP, YAML, Markdown,
       picked by file extension (`src/highlight.ts`).
 
+## Container model simplification — done
+- [x] Collapse multi-container projects to a single `container` reference
+      (storage.rs / lib.rs / types.ts / api.ts), with legacy migration from the
+      old `containers[]` array on read.
+- [x] Choose the container in the New Project form (shared `ContainerField`,
+      also used by Configure): select from live `docker ps`, manual fallback.
+- [x] Validate the container working directory exists in the chosen container
+      before creating/saving (`check_container_path`; live indicator + submit
+      guard).
+
 ## Phase 3 (AI — not started)
 - [ ] Generate/edit tasks from natural language.
 - [ ] Summarise run output and suggest fixes.
