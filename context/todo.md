@@ -35,18 +35,23 @@ Update this after each meaningful step.
       `window.prompt` — `ConfirmDialog` (delete project/task) and `PromptDialog`
       (add task file) in `src/App.tsx`.
 
-## Phase 2 (Docker execution)
-- [ ] Startup check: probe for the Docker CLI/daemon; show a warning screen if
-      missing or unreachable.
-- [ ] Container selection lists only running containers via `docker ps`
-      (Dogger does not manage containers — see rules.md).
-- [ ] Before running a task, verify configured containers are running; warn
-      otherwise.
-- [ ] Rust command to run `main.sh` inside a container via `docker exec`.
-- [ ] Decide how the task dir is exposed to the container (bind mount vs
-      `docker cp`) — still open in decisions.md.
-- [ ] Stream stdout/stderr live into the UI; show exit code.
-- [ ] Per-task run history.
+## Phase 2 (Docker execution) — done
+- [x] Startup check: probe for the Docker CLI/daemon; show a warning screen if
+      missing or unreachable (`docker_status`; `DockerWarning` in `App.tsx`).
+- [x] Container selection lists only running containers via `docker ps`
+      (`list_running_containers`; running-container picker in the config
+      editor). Status is derived live, no longer a stored mock.
+- [x] Before running a task, verify configured containers are running; warn
+      otherwise (Run buttons disabled when no running container; `run_task`
+      re-checks server-side via `is_container_running`).
+- [x] Rust command to run `main.sh` inside a container via `docker exec`
+      (`src-tauri/src/docker.rs::run_task`).
+- [x] Task dir exposed to the container via `docker cp` (bind mount rejected —
+      can't add mounts to a running container; see decisions.md).
+- [x] Stream stdout/stderr live into the UI; show exit code (Tauri events
+      `dogger://run-output` / `dogger://run-finished`; `RunConsole`).
+- [x] Per-task run history (persisted under `tasks/<task>/.runs/`; `list_runs`;
+      `RunHistory`).
 
 ## Phase 3 (AI — not started)
 - [ ] Generate/edit tasks from natural language.

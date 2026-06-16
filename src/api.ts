@@ -3,7 +3,16 @@
 // `~/.dogger`; the UI only ever talks to disk through these functions.
 
 import { invoke } from "@tauri-apps/api/core";
-import type { DockerContainer, Project, Task } from "./types";
+import { listen } from "@tauri-apps/api/event";
+import type { UnlistenFn } from "@tauri-apps/api/event";
+import type {
+  DockerContainer,
+  DockerStatus,
+  Project,
+  RunningContainer,
+  RunRecord,
+  Task,
+} from "./types";
 
 export function listProjects(): Promise<Project[]> {
   return invoke("list_projects");
@@ -79,4 +88,65 @@ export function writeTaskFile(
   contents: string,
 ): Promise<void> {
   return invoke("write_task_file", { projectId, taskId, file, contents });
+}
+
+// ---- Phase 2: Docker execution ---------------------------------------------
+
+export function dockerStatus(): Promise<DockerStatus> {
+  return invoke("docker_status");
+}
+
+export function listRunningContainers(): Promise<RunningContainer[]> {
+  return invoke("list_running_containers");
+}
+
+export function listRuns(
+  projectId: string,
+  taskId: string,
+): Promise<RunRecord[]> {
+  return invoke("list_runs", { projectId, taskId });
+}
+
+export function runTask(input: {
+  projectId: string;
+  taskId: string;
+  container: string;
+  runId: string;
+}): Promise<RunRecord> {
+  return invoke("run_task", {
+    projectId: input.projectId,
+    taskId: input.taskId,
+    container: input.container,
+    runId: input.runId,
+  });
+}
+
+export interface RunOutputEvent {
+  runId: string;
+  stream: "stdout" | "stderr";
+  line: string;
+}
+
+export interface RunFinishedEvent {
+  runId: string;
+  exitCode: number | null;
+  status: RunRecord["status"];
+}
+
+/** Subscribe to streamed output lines for in-flight task runs. */
+export function onRunOutput(
+  handler: (event: RunOutputEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<RunOutputEvent>("dogger://run-output", (e) =>
+    handler(e.payload),
+  );
+}
+
+/** Subscribe to run-finished notifications (exit code + final status). */
+export function onRunFinished(
+  handler: (event: RunFinishedEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<RunFinishedEvent>("dogger://run-finished", (e) =>
+    handler(e.payload),
+  );
 }

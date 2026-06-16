@@ -54,3 +54,58 @@ export function getProjectStatus(project: Project): ProjectStatus {
   if (project.containers.length === 0) return "offline";
   return project.containers.every((c) => c.running) ? "online" : "offline";
 }
+
+/** Result of probing the local Docker CLI/daemon (Phase 2). */
+export interface DockerStatus {
+  cliInstalled: boolean;
+  daemonRunning: boolean;
+  serverVersion: string | null;
+  message: string | null;
+}
+
+/** A container currently running on the host (`docker ps`). */
+export interface RunningContainer {
+  id: string;
+  name: string;
+  image: string;
+  status: string;
+}
+
+export type RunStatus = "running" | "success" | "failed" | "error";
+
+export interface OutputLine {
+  stream: "stdout" | "stderr";
+  text: string;
+}
+
+/** A persisted record of a single task run. Timestamps are epoch millis. */
+export interface RunRecord {
+  id: string;
+  container: string;
+  command: string;
+  startedAt: number;
+  finishedAt: number | null;
+  exitCode: number | null;
+  status: RunStatus;
+  output: OutputLine[];
+}
+
+/**
+ * Decide whether a configured container `reference` is among the running
+ * containers reported by `docker ps`. Matches by exact name, full/short id, or
+ * image — mirroring the Rust-side `is_container_running`.
+ */
+export function matchesRunning(
+  reference: string,
+  running: RunningContainer[],
+): boolean {
+  const ref = reference.trim();
+  if (!ref) return false;
+  return running.some(
+    (c) =>
+      c.name === ref ||
+      c.id === ref ||
+      c.id.startsWith(ref) ||
+      c.image === ref,
+  );
+}

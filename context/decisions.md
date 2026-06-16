@@ -73,13 +73,49 @@ is **offline**. This status is computed (from `docker ps` at runtime; mocked in
 Phase 1), never stored. Offline projects can't run tasks. Implemented as
 `getProjectStatus()` in `src/types.ts`, surfaced as a dot/badge in the UI.
 
-## 2026-06-16 — Task dir reaches the container via bind mount
-At run time the task directory (`~/.dogger/.../tasks/<task>`) is bind-mounted
-into the running container, rather than copied in with `docker cp`. This keeps
-task content outside the project's own mounted volume, upholding the read-only
-rule (we never write into the project's codebase). `main.sh` is always invoked
-with the project's codebase root as the working directory inside the container,
-so scripts can assume they run from the root of the codebase.
+## 2026-06-16 — Task dir reaches the container via bind mount (SUPERSEDED)
+Originally we planned to bind-mount the task directory into the running
+container. Superseded by the `docker cp` decision below: a bind mount can only
+be added when a container is *created*, which would require Dogger to manage
+container lifecycle — forbidden by Rule 3. See the next entry.
+
+## 2026-06-16 — Phase 2: task dir reaches the container via `docker cp`
+Because Dogger only attaches to already-running containers (Rule 3) and a bind
+mount cannot be added to a running container, the task directory is **copied**
+into the target container at run time:
+
+1. `docker exec <c> mkdir -p /tmp/dogger/<run-id>`
+2. `docker cp <task-dir>/. <c>:/tmp/dogger/<run-id>`
+3. `docker exec -w <container-working-dir> <c> bash /tmp/dogger/<run-id>/main.sh`
+
+`main.sh` is invoked with the project's configured container working directory
+(its codebase root) as the working directory, so scripts can assume they run
+from the root of the codebase. Nothing is ever written into the project's own
+codebase (Rule 1); only an ephemeral copy under `/tmp/dogger` inside the
+container is created. Implemented in `src-tauri/src/docker.rs`.
+
+## 2026-06-16 — Phase 2: live output via Tauri events, run history on disk
+`run_task` spawns the `docker exec` on a background thread and streams
+stdout/stderr line-by-line to the frontend as Tauri events
+(`dogger://run-output`, `dogger://run-finished`), keyed by a client-generated
+`runId`. The UI attaches its listeners *before* invoking `run_task` (guarded
+against React StrictMode double-invocation) so no early output is dropped. Each
+run is persisted as JSON under a hidden `~/.dogger/<project>/tasks/<task>/.runs/`
+directory (written once at start with `status: "running"`, overwritten on
+completion with the exit code and captured output). `.runs/` is hidden from the
+task file editor because `list_task_files` only returns regular files.
+
+## 2026-06-16 — Phase 2: container status derived from `docker ps`
+Container `running` state is now computed live: the frontend polls
+`list_running_containers` (every 5s while Docker is reachable) and matches each
+configured container `reference` against running containers by name, full/short
+id, or image (`matchesRunning` in `src/types.ts`, mirrored by
+`is_container_running` in Rust). The persisted `running` flag is kept only as a
+fallback for when Docker is unavailable. The config editor offers a picker of
+running containers so selection lists only running ones (Rule 3), while still
+allowing manual entry. A startup probe (`docker_status`) shows a full-screen
+warning (with Retry / Continue) when the CLI is missing or the daemon is
+unreachable.
 
 ## 2026-06-16 — Persistence implemented in a Rust `storage` module
 All `~/.dogger` disk access lives in `src-tauri/src/storage.rs`, exposed to the
@@ -113,4 +149,5 @@ in-app `ConfirmDialog` and `PromptDialog` components built on the existing
 `Modal`, used for delete-project, delete-task, and add-task-file flows.
 
 ## Open questions
-- **Output streaming:** how to stream `main.sh` stdout/stderr live into the UI.
+- (resolved) **Output streaming:** stream `main.sh` stdout/stderr live into the
+  UI — done via Tauri events in Phase 2 (see above).

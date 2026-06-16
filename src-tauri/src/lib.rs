@@ -2,9 +2,11 @@
 // keeps every byte Dogger manages under `~/.dogger` (never inside a project's
 // own codebase — see context/rules.md).
 
+mod docker;
 mod storage;
 
-use storage::{DockerContainer, Project, Task};
+use docker::{DockerStatus, RunningContainer};
+use storage::{DockerContainer, Project, RunRecord, Task};
 
 #[tauri::command]
 fn list_projects() -> Result<Vec<Project>, String> {
@@ -76,6 +78,32 @@ fn write_task_file(
     storage::write_task_file(&project_id, &task_id, &file, &contents)
 }
 
+#[tauri::command]
+fn docker_status() -> DockerStatus {
+    docker::docker_status()
+}
+
+#[tauri::command]
+fn list_running_containers() -> Result<Vec<RunningContainer>, String> {
+    docker::list_running_containers()
+}
+
+#[tauri::command]
+fn list_runs(project_id: String, task_id: String) -> Result<Vec<RunRecord>, String> {
+    storage::list_runs(&project_id, &task_id)
+}
+
+#[tauri::command]
+fn run_task(
+    app: tauri::AppHandle,
+    project_id: String,
+    task_id: String,
+    container: String,
+    run_id: String,
+) -> Result<RunRecord, String> {
+    docker::run_task(app, &project_id, &task_id, &container, &run_id)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -91,6 +119,10 @@ pub fn run() {
             list_task_files,
             read_task_file,
             write_task_file,
+            docker_status,
+            list_running_containers,
+            list_runs,
+            run_task,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

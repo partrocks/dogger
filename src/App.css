@@ -710,6 +710,273 @@ code {
   font-size: 12px;
 }
 
+/* ---- Banners (warning) ---- */
+.banner--warn {
+  background: rgba(254, 188, 46, 0.14);
+  border: 1px solid rgba(254, 188, 46, 0.45);
+  color: #9a6b00;
+}
+
+@media (prefers-color-scheme: dark) {
+  .banner--warn {
+    color: #f4c45a;
+  }
+}
+
+/* ---- Task run controls ---- */
+.task-run-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.container-select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  max-width: 160px;
+}
+
+.run-button {
+  font-weight: 600;
+}
+
+/* ---- Running-container picker (config editor) ---- */
+.running-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.running-picker-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip--button {
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.chip--button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.chip--button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Run console (modal) ---- */
+.run-modal {
+  width: 720px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 80px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.run-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.run-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.run-modal-name {
+  font-weight: 600;
+}
+
+.run-modal-target {
+  font-size: 11px;
+}
+
+.run-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.run-output {
+  flex: 1;
+  overflow-y: auto;
+  background: #0f1115;
+  color: #d7dae0;
+  padding: 12px 14px;
+  font-family: "SFMono-Regular", ui-monospace, Menlo, monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+  min-height: 220px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.run-line--err {
+  color: #ff8d80;
+}
+
+.run-output-empty {
+  color: #6b7280;
+}
+
+/* ---- Run status badges ---- */
+.run-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.run-badge--running {
+  background: rgba(79, 124, 255, 0.16);
+  color: var(--accent);
+}
+
+.run-badge--success {
+  background: rgba(40, 200, 64, 0.16);
+  color: #1f9b3a;
+}
+
+.run-badge--failed {
+  background: rgba(255, 95, 87, 0.16);
+  color: #c0392b;
+}
+
+/* ---- Run history ---- */
+.runs-section {
+  margin-top: 28px;
+}
+
+.runs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.run-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.run-item-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  padding: 10px 14px;
+  color: var(--text);
+}
+
+.run-item-when {
+  font-size: 13px;
+}
+
+.run-item-target {
+  font-size: 11px;
+}
+
+.run-item-dur {
+  font-size: 12px;
+}
+
+.run-item-chevron {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.run-item-body {
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.run-item-cmd {
+  margin: 10px 14px 0;
+  align-self: flex-start;
+  font-size: 11px;
+}
+
+.run-item-body .run-output {
+  border-radius: 0;
+  min-height: 80px;
+  max-height: 280px;
+  margin-top: 10px;
+}
+
+/* ---- Docker warning screen ---- */
+.docker-warning {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 32px;
+}
+
+.docker-warning-card {
+  max-width: 460px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+.docker-warning-mark {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+
+.docker-warning-card h2 {
+  margin: 0 0 12px;
+}
+
+.docker-warning-note {
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+.form-actions--center {
+  justify-content: center;
+  margin-top: 24px;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #16171a;

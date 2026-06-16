@@ -57,6 +57,37 @@ pub struct TaskFile {
     pub description: Option<String>,
 }
 
+/// A single line of captured output from a task run.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OutputLine {
+    /// `"stdout"` or `"stderr"`.
+    pub stream: String,
+    pub text: String,
+}
+
+/// A persisted record of a single task run. Stored as JSON under a hidden
+/// `.runs/` directory inside the task folder so it never appears in the task's
+/// editable file list. `started_at`/`finished_at` are epoch milliseconds.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunRecord {
+    pub id: String,
+    /// Container reference (name or id) the run targeted.
+    pub container: String,
+    /// The command Dogger executed inside the container (for transparency).
+    pub command: String,
+    pub started_at: i64,
+    #[serde(default)]
+    pub finished_at: Option<i64>,
+    #[serde(default)]
+    pub exit_code: Option<i32>,
+    /// `"running" | "success" | "failed" | "error"`.
+    pub status: String,
+    #[serde(default)]
+    pub output: Vec<OutputLine>,
+}
+
 /// A task as surfaced to the UI. `dir` equals `id` (the task's folder name).
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -108,8 +139,12 @@ fn tasks_dir(project_id: &str) -> Result<PathBuf> {
     Ok(project_dir(project_id)?.join("tasks"))
 }
 
-fn task_dir(project_id: &str, task_id: &str) -> Result<PathBuf> {
+pub fn task_dir(project_id: &str, task_id: &str) -> Result<PathBuf> {
     Ok(tasks_dir(project_id)?.join(sanitize_component(task_id)?))
+}
+
+fn runs_dir(project_id: &str, task_id: &str) -> Result<PathBuf> {
+    Ok(task_dir(project_id, task_id)?.join(".runs"))
 }
 
 /// Turn a human name into a filesystem-safe slug for use as a directory id.
@@ -387,6 +422,37 @@ pub fn write_task_file(project_id: &str, task_id: &str, file: &str, contents: &s
         make_executable(&path)?;
     }
     Ok(())
+}
+
+/// Persist a run record under the task's hidden `.runs/` directory. Used both
+/// to record a run as it starts (`status: "running"`) and to overwrite it with
+/// the final result when it finishes.
+pub fn save_run(project_id: &str, task_id: &str, run: &RunRecord) -> Result<()> {
+    let dir = runs_dir(project_id, task_id)?;
+    fs::create_dir_all(&dir).map_err(map_err("create runs dir"))?;
+    let id = sanitize_component(&run.id)?;
+    write_json(&dir.join(format!("{id}.json")), run)
+}
+
+/// List a task's run history, most recent first.
+pub fn list_runs(project_id: &str, task_id: &str) -> Result<Vec<RunRecord>> {
+    let dir = runs_dir(project_id, task_id)?;
+    let mut runs = Vec::new();
+    if !dir.exists() {
+        return Ok(runs);
+    }
+    for entry in fs::read_dir(&dir).map_err(map_err("read runs dir"))? {
+        let entry = entry.map_err(map_err("read dir entry"))?;
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("json") {
+            continue;
+        }
+        if let Ok(run) = read_json::<RunRecord>(&path) {
+            runs.push(run);
+        }
+    }
+    runs.sort_by(|a, b| b.started_at.cmp(&a.started_at));
+    Ok(runs)
 }
 
 #[cfg(unix)]
