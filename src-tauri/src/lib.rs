@@ -5,8 +5,13 @@
 mod docker;
 mod storage;
 
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
+
+use tauri::{LogicalPosition, LogicalSize, Manager, WebviewWindow, Window, WindowEvent};
+
 use docker::{DockerStatus, RunningContainer, ShellInfo};
-use storage::{Project, RunRecord, Task};
+use storage::{Project, RunRecord, Task, WindowState};
 
 #[tauri::command]
 fn list_projects() -> Result<Vec<Project>, String> {
@@ -119,11 +124,67 @@ fn run_task(
     docker::run_task(app, &project_id, &task_id, &container, &run_id)
 }
 
+/// Apply the last persisted window geometry to the main window on startup.
+/// Best-effort: a missing/corrupt config just leaves the `tauri.conf.json`
+/// defaults in place.
+fn restore_window_state(window: &WebviewWindow) {
+    if let Ok(Some(state)) = storage::load_window_state() {
+        let _ = window.set_size(LogicalSize::new(state.width, state.height));
+        let _ = window.set_position(LogicalPosition::new(state.x, state.y));
+    }
+}
+
+/// Persist the main window's current geometry to `~/.dogger/config.json`.
+///
+/// macOS fires a flood of `Moved`/`Resized` events while dragging, so non-forced
+/// saves are throttled; `force` (used on close) bypasses it to capture the final
+/// resting geometry. Geometry is stored in logical units for DPI independence.
+fn persist_window_state(window: &Window, force: bool) {
+    static LAST_SAVE: OnceLock<Mutex<Instant>> = OnceLock::new();
+    let throttle = LAST_SAVE.get_or_init(|| Mutex::new(Instant::now() - Duration::from_secs(1)));
+    if !force {
+        if let Ok(mut last) = throttle.lock() {
+            if last.elapsed() < Duration::from_millis(400) {
+                return;
+            }
+            *last = Instant::now();
+        }
+    }
+
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let (Ok(position), Ok(size)) = (window.outer_position(), window.inner_size()) else {
+        return;
+    };
+    let position = position.to_logical::<f64>(scale);
+    let size = size.to_logical::<f64>(scale);
+    let _ = storage::save_window_state(WindowState {
+        x: position.x,
+        y: position.y,
+        width: size.width,
+        height: size.height,
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                restore_window_state(&window);
+            }
+            Ok(())
+        })
+        .on_window_event(|window, event| match event {
+            WindowEvent::Moved(_) | WindowEvent::Resized(_) => {
+                persist_window_state(window, false);
+            }
+            WindowEvent::CloseRequested { .. } => {
+                persist_window_state(window, true);
+            }
+            _ => {}
+        })
         .invoke_handler(tauri::generate_handler![
             list_projects,
             create_project,

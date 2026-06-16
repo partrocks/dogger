@@ -7,6 +7,7 @@
 //! Layout:
 //! ```text
 //! ~/.dogger/
+//!   config.json             # top-level app config (window position/size)
 //!   <project-id>/
 //!     project.json          # name, codebase path, container config
 //!     tasks/
@@ -51,6 +52,29 @@ pub struct ProjectFile {
     /// keeps it out of any file Dogger writes.
     #[serde(default, skip_serializing)]
     pub containers: Vec<LegacyContainer>,
+}
+
+/// Dogger's top-level app config, persisted at `~/.dogger/config.json`. This is
+/// Dogger's own memory (window geometry today, room for more later), kept
+/// separate from any individual project. Unknown fields are ignored on read so
+/// the file can grow without breaking older builds.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AppConfig {
+    /// Last known main-window geometry, restored on startup.
+    #[serde(default)]
+    pub window: Option<WindowState>,
+}
+
+/// Persisted main-window geometry, in *logical* (DPI-independent) units so the
+/// numbers match `tauri.conf.json` and round-trip across scale factors.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowState {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
 }
 
 /// The persisted shape of `task.json`.
@@ -135,6 +159,34 @@ pub fn dogger_home() -> Result<PathBuf> {
         seed_examples(&root);
     }
     Ok(root)
+}
+
+/// Absolute path to Dogger's top-level config file (`~/.dogger/config.json`).
+fn config_path() -> Result<PathBuf> {
+    Ok(dogger_home()?.join("config.json"))
+}
+
+/// Read the top-level app config, returning defaults if the file is absent.
+/// A malformed file surfaces as an error so callers can decide how to recover
+/// (startup simply ignores it rather than refusing to launch).
+pub fn load_app_config() -> Result<AppConfig> {
+    let path = config_path()?;
+    if !path.exists() {
+        return Ok(AppConfig::default());
+    }
+    read_json(&path)
+}
+
+/// The last persisted main-window geometry, if any.
+pub fn load_window_state() -> Result<Option<WindowState>> {
+    Ok(load_app_config().unwrap_or_default().window)
+}
+
+/// Persist the main-window geometry, preserving any other config fields.
+pub fn save_window_state(state: WindowState) -> Result<()> {
+    let mut config = load_app_config().unwrap_or_default();
+    config.window = Some(state);
+    write_json(&config_path()?, &config)
 }
 
 fn project_dir(id: &str) -> Result<PathBuf> {

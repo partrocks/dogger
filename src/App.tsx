@@ -1162,6 +1162,14 @@ function Modal({
   onClose: () => void;
   children: ReactNode;
 }) {
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
@@ -1567,6 +1575,15 @@ function RunConsole({
   }, [lines]);
 
   const finished = status !== "starting" && status !== "running";
+
+  useEffect(() => {
+    if (!finished) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [finished, onClose]);
 
   return (
     <div className="modal-overlay" onClick={finished ? onClose : undefined}>

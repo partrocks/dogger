@@ -196,6 +196,20 @@ run directly so the path needs no shell quoting). The form shows a live
 exists/not-found indicator and blocks create/save when the path is missing
 (only when a container is selected and Docker is reachable).
 
+## 2026-06-16 — App-level memory in `~/.dogger/config.json`
+Dogger now keeps its own top-level memory in `~/.dogger/config.json`, separate
+from any project. First use: main-window geometry (position + size). Restored on
+startup in the Tauri `setup` hook and persisted on `Moved`/`Resized`/
+`CloseRequested` window events (`restore_window_state`/`persist_window_state` in
+`lib.rs`; `AppConfig`/`WindowState` + `load_window_state`/`save_window_state` in
+`storage.rs`). Chosen over `tauri-plugin-window-state` to keep all of Dogger's
+state in `~/.dogger` as plain, inspectable JSON (consistent with the existing
+persistence decisions) and to give the app a single config file to grow into.
+Geometry is stored in *logical* units so values match `tauri.conf.json` and
+round-trip across display scale factors. Frequent drag-time events are throttled
+(~400ms), with a forced save on close to capture the final geometry. A missing
+or corrupt config is non-fatal — the `tauri.conf.json` defaults stay in place.
+
 ## Open questions
 - (resolved) **Output streaming:** stream `main.sh` stdout/stderr live into the
   UI — done via Tauri events in Phase 2 (see above).

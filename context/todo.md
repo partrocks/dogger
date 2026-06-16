@@ -73,6 +73,12 @@ Update this after each meaningful step.
       before creating/saving (`check_container_path`; live indicator + submit
       guard).
 
+## App-level config — done
+- [x] Top-level app memory in `~/.dogger/config.json` (`AppConfig`/`WindowState`
+      in `storage.rs`). Restores the main window's position + size on startup and
+      persists them on move/resize/close (`restore_window_state` /
+      `persist_window_state` in `lib.rs`).
+
 ## Phase 3 (AI — not started)
 - [ ] Generate/edit tasks from natural language.
 - [ ] Summarise run output and suggest fixes.
