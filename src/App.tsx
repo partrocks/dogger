@@ -26,6 +26,9 @@ import "./App.css";
 // inside a running container via `docker cp` + `docker exec`, streaming output
 // into the UI.
 
+// Below this window width the sidebar auto-collapses to its icon rail.
+const SIDEBAR_COLLAPSE_WIDTH = 760;
+
 // Whether a project's single configured container is currently running. When
 // Docker is unavailable (`running === null`) we can't confirm it, so treat it
 // as not running.
@@ -47,6 +50,26 @@ function App() {
     const [docker, setDocker] = useState<DockerStatus | null>(null);
     const [running, setRunning] = useState<RunningContainer[] | null>(null);
     const [dockerDismissed, setDockerDismissed] = useState(false);
+
+    // The sidebar collapses to an icon rail. It auto-collapses on narrow
+    // windows but stays manually toggleable; crossing the breakpoint re-syncs
+    // to the window so resizing always feels natural.
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(
+        () => window.innerWidth < SIDEBAR_COLLAPSE_WIDTH,
+    );
+    const wasNarrowRef = useRef(window.innerWidth < SIDEBAR_COLLAPSE_WIDTH);
+
+    useEffect(() => {
+        function onResize() {
+            const narrow = window.innerWidth < SIDEBAR_COLLAPSE_WIDTH;
+            if (narrow !== wasNarrowRef.current) {
+                wasNarrowRef.current = narrow;
+                setSidebarCollapsed(narrow);
+            }
+        }
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, []);
 
     const refresh = useCallback(async (preferId?: string) => {
         try {
@@ -136,17 +159,42 @@ function App() {
         <div className="window">
             <Titlebar />
             <div className="app">
-                <aside className="sidebar">
+                <aside
+                    className={
+                        "sidebar" +
+                        (sidebarCollapsed ? " sidebar--collapsed" : "")
+                    }
+                >
                     <div className="brand">
                         <DoggerMark className="brand-mark" />
-                        <h1 className="brand-name">Dogger</h1>
+                        {!sidebarCollapsed && (
+                            <h1 className="brand-name">Dogger</h1>
+                        )}
+                        <button
+                            className="sidebar-toggle"
+                            title={
+                                sidebarCollapsed
+                                    ? "Expand sidebar"
+                                    : "Collapse sidebar"
+                            }
+                            aria-label={
+                                sidebarCollapsed
+                                    ? "Expand sidebar"
+                                    : "Collapse sidebar"
+                            }
+                            aria-expanded={!sidebarCollapsed}
+                            onClick={() => setSidebarCollapsed((c) => !c)}
+                        >
+                            {sidebarCollapsed ? "»" : "«"}
+                        </button>
                     </div>
 
                     <div className="sidebar-section-label">
-                        <span>Projects</span>
+                        {!sidebarCollapsed && <span>Projects</span>}
                         <button
                             className="icon-button"
                             title="New project"
+                            aria-label="New project"
                             onClick={() => setNewProjectOpen(true)}
                         >
                             +
@@ -156,6 +204,9 @@ function App() {
                     <nav className="project-list">
                         {projects.map((project) => {
                             const status = getProjectStatus(project, running);
+                            const taskLabel = `${project.tasks.length} task${
+                                project.tasks.length === 1 ? "" : "s"
+                            }`;
                             return (
                                 <button
                                     key={project.id}
@@ -166,36 +217,62 @@ function App() {
                                             : "")
                                     }
                                     onClick={() => setSelectedId(project.id)}
+                                    title={
+                                        sidebarCollapsed
+                                            ? `${project.name} · ${taskLabel}`
+                                            : undefined
+                                    }
                                 >
-                                    <span className="project-item-name">
-                                        <span
-                                            className={
-                                                "status-dot status-dot--" +
-                                                status
-                                            }
-                                            title={
-                                                status === "online"
-                                                    ? "Online"
-                                                    : "Offline"
-                                            }
-                                        />
-                                        {project.name}
-                                    </span>
-                                    <span className="project-item-meta">
-                                        {project.tasks.length} task
-                                        {project.tasks.length === 1 ? "" : "s"}
-                                    </span>
+                                    {sidebarCollapsed ? (
+                                        <span className="project-item-avatar">
+                                            {project.name
+                                                .trim()
+                                                .charAt(0)
+                                                .toUpperCase() || "?"}
+                                            <span
+                                                className={
+                                                    "status-dot status-dot--" +
+                                                    status +
+                                                    " project-item-avatar-dot"
+                                                }
+                                            />
+                                        </span>
+                                    ) : (
+                                        <>
+                                            <span className="project-item-name">
+                                                <span
+                                                    className={
+                                                        "status-dot status-dot--" +
+                                                        status
+                                                    }
+                                                    title={
+                                                        status === "online"
+                                                            ? "Online"
+                                                            : "Offline"
+                                                    }
+                                                />
+                                                {project.name}
+                                            </span>
+                                            <span className="project-item-meta">
+                                                {taskLabel}
+                                            </span>
+                                        </>
+                                    )}
                                 </button>
                             );
                         })}
-                        {!loading && projects.length === 0 && (
-                            <p className="sidebar-empty">No projects yet.</p>
-                        )}
+                        {!loading &&
+                            projects.length === 0 &&
+                            !sidebarCollapsed && (
+                                <p className="sidebar-empty">No projects yet.</p>
+                            )}
                     </nav>
 
-                    <div className="sidebar-footer">
-                        &copy; 2026 PartRocks, Happy Coder.
-                    </div>
+                    {!sidebarCollapsed && (
+                        <div className="sidebar-footer">
+                            &copy; 2026 PartRocks, Happy Coder.
+                        </div>
+                    )}
                 </aside>
 
                 <main className="main">
