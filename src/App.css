@@ -245,8 +245,14 @@ body,
 .project-title {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   margin: 0 0 16px;
+}
+
+.project-title h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .project-header h2 {
@@ -1084,6 +1090,7 @@ code {
 .run-item-head {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   width: 100%;
   background: none;
@@ -1188,5 +1195,121 @@ code {
     --muted: #9aa0a6;
     --chip-bg: #2b3350;
     --chip-fg: #aab8ff;
+  }
+}
+
+/* ---- Responsive layout ---------------------------------------------------
+   The window can be resized to fairly narrow widths. These breakpoints keep
+   the sidebar + content layout usable: rigid grids collapse to a single
+   column, the sidebar shrinks (and finally moves above the content), and
+   padding tightens so nothing gets clipped or forces horizontal scrolling. */
+
+/* Medium windows: tighten spacing and shrink the sidebar a little. */
+@media (max-width: 900px) {
+  .main {
+    padding: 24px 24px;
+  }
+
+  .sidebar {
+    width: 208px;
+  }
+}
+
+/* Narrow windows: collapse the config grid and the task-detail file editor so
+   they stack vertically instead of overflowing. */
+@media (max-width: 720px) {
+  .main {
+    padding: 20px 18px;
+  }
+
+  .project-config {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .file-editor {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    min-height: 0;
+  }
+
+  /* In the stacked layout the file list reads better as a horizontal,
+     wrapping strip above the editor. */
+  .file-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .file-list-head {
+    flex-basis: 100%;
+    padding: 0 4px 4px;
+  }
+
+  .code-editor-wrap {
+    min-height: 280px;
+  }
+}
+
+/* Very narrow windows (or a tall, skinny window): move the sidebar above the
+   content as a compact bar so the main area gets full width. */
+@media (max-width: 560px) {
+  .app {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 10px 14px;
+    max-height: 45%;
+    overflow-y: auto;
+  }
+
+  .brand {
+    padding: 0;
+  }
+
+  .sidebar-section-label {
+    padding: 0;
+    margin-left: auto;
+  }
+
+  .project-list {
+    flex-basis: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow-y: visible;
+  }
+
+  .project-item {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .project-item-meta {
+    margin-left: 4px;
+  }
+
+  .sidebar-footer {
+    display: none;
+  }
+
+  .task-row {
+    flex-wrap: wrap;
+  }
+
+  .task-run-controls {
+    margin-left: auto;
+  }
+
+  .form-grid {
+    max-width: none;
   }
 }
