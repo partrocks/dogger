@@ -242,3 +242,11 @@ export function saveSettings(settings: Settings): Promise<void> {
 export function onOpenSettings(handler: () => void): Promise<UnlistenFn> {
   return listen("dogger://open-settings", () => handler());
 }
+
+/**
+ * Subscribe to the tray's "About Dogger" action, which asks the app to navigate
+ * to the About screen after bringing the main window forward.
+ */
+export function onOpenAbout(handler: () => void): Promise<UnlistenFn> {
+  return listen("dogger://open-about", () => handler());
+}

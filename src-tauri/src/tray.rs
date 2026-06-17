@@ -24,15 +24,17 @@
 use std::sync::Mutex;
 
 use serde::Deserialize;
-use tauri::menu::{
-    AboutMetadataBuilder, Menu, MenuBuilder, MenuItem, PredefinedMenuItem, SubmenuBuilder,
-};
+use tauri::menu::{Menu, MenuBuilder, MenuItem, SubmenuBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 
 /// Event emitted to the main window when "Settings…" is chosen from the tray,
 /// telling the frontend to navigate to the Settings screen.
 pub const OPEN_SETTINGS_EVENT: &str = "dogger://open-settings";
+
+/// Event emitted to the main window when "About Dogger" is chosen from the
+/// tray, telling the frontend to navigate to the in-app About screen.
+pub const OPEN_ABOUT_EVENT: &str = "dogger://open-about";
 
 /// Stable id of the single tray icon, used to look it up for menu updates.
 const TRAY_ID: &str = "dogger-tray";
@@ -111,17 +113,9 @@ fn build_menu<R: Runtime>(
     app: &AppHandle<R>,
     projects: &[TrayProject],
 ) -> tauri::Result<tauri::menu::Menu<R>> {
-    let about = PredefinedMenuItem::about(
-        app,
-        Some("About Dogger"),
-        Some(
-            AboutMetadataBuilder::new()
-                .name(Some("Dogger"))
-                .version(Some(env!("CARGO_PKG_VERSION")))
-                .comments(Some("Run containerised project tasks."))
-                .build(),
-        ),
-    )?;
+    // Custom "About" entry (rather than the native macOS about panel) so it can
+    // open Dogger's own branded About screen in the main window.
+    let about = MenuItem::with_id(app, "about", "About Dogger", true, None::<&str>)?;
 
     let mut menu = MenuBuilder::new(app).item(&about).separator();
 
@@ -241,6 +235,7 @@ fn on_menu_event<R: Runtime>(app: &AppHandle<R>, event: tauri::menu::MenuEvent) 
     let id = event.id().as_ref();
     match id {
         "toggle" => toggle_main_window(app),
+        "about" => open_about(app),
         "settings" => open_settings(app),
         "quit" => app.exit(0),
         _ if id.starts_with(RUN_PREFIX) => {
@@ -280,6 +275,18 @@ fn open_settings<R: Runtime>(app: &AppHandle<R>) {
     let _ = window.show();
     let _ = window.set_focus();
     let _ = window.emit(OPEN_SETTINGS_EVENT, ());
+}
+
+/// Bring the main window forward and ask the frontend to switch to the About
+/// screen. Mirrors [`open_settings`]: show + focus first (the window may be
+/// hidden), then emit the navigation event the React app listens for.
+fn open_about<R: Runtime>(app: &AppHandle<R>) {
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+    let _ = window.show();
+    let _ = window.set_focus();
+    let _ = window.emit(OPEN_ABOUT_EVENT, ());
 }
 
 /// Open (or focus, if already open) a small runner window for a single task.

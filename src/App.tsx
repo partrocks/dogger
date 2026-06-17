@@ -14,6 +14,7 @@ import { ProjectView } from "./components/ProjectView";
 import { EmptyState } from "./components/EmptyState";
 import { NewProjectDialog } from "./components/NewProjectDialog";
 import { SettingsView } from "./components/SettingsView";
+import { AboutView } from "./components/AboutView";
 import { DoggerMark } from "./components/DoggerMark";
 import { ZoomIndicator } from "./components/ZoomIndicator";
 import { useZoom } from "./useZoom";
@@ -37,6 +38,7 @@ function App() {
     const [error, setError] = useState<string | null>(null);
     const [newProjectOpen, setNewProjectOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [aboutOpen, setAboutOpen] = useState(false);
     // When true, the main area shows the home screen (logo + "New project"
     // CTA) regardless of which project is selected. Clicking the brand sets
     // this; selecting a project clears it.
@@ -125,6 +127,7 @@ function App() {
                 e.key === ","
             ) {
                 e.preventDefault();
+                setAboutOpen(false);
                 setSettingsOpen(true);
             }
         }
@@ -135,7 +138,22 @@ function App() {
     // The tray's "Settings…" item brings the window forward (Rust side) and
     // emits this event so we land on the Settings screen.
     useEffect(() => {
-        const unlisten = api.onOpenSettings(() => setSettingsOpen(true));
+        const unlisten = api.onOpenSettings(() => {
+            setAboutOpen(false);
+            setSettingsOpen(true);
+        });
+        return () => {
+            unlisten.then((fn) => fn()).catch(() => {});
+        };
+    }, []);
+
+    // The tray's "About Dogger" item likewise brings the window forward and
+    // emits this event so we land on the in-app About screen.
+    useEffect(() => {
+        const unlisten = api.onOpenAbout(() => {
+            setSettingsOpen(false);
+            setAboutOpen(true);
+        });
         return () => {
             unlisten.then((fn) => fn()).catch(() => {});
         };
@@ -219,6 +237,7 @@ function App() {
                             aria-label="Home"
                             onClick={() => {
                                 setSettingsOpen(false);
+                                setAboutOpen(false);
                                 setShowHome(true);
                             }}
                         >
@@ -279,6 +298,7 @@ function App() {
                                     }
                                     onClick={() => {
                                         setSettingsOpen(false);
+                                        setAboutOpen(false);
                                         setShowHome(false);
                                         setSelectedId(project.id);
                                     }}
@@ -339,7 +359,10 @@ function App() {
                                 "sidebar-action" +
                                 (settingsOpen ? " is-active" : "")
                             }
-                            onClick={() => setSettingsOpen(true)}
+                            onClick={() => {
+                                setAboutOpen(false);
+                                setSettingsOpen(true);
+                            }}
                             title="Settings"
                             aria-label="Settings"
                         >
@@ -347,9 +370,19 @@ function App() {
                             {!sidebarCollapsed && <span>Settings</span>}
                         </button>
                         {!sidebarCollapsed && (
-                            <div className="sidebar-footer">
+                            <button
+                                className={
+                                    "sidebar-footer" +
+                                    (aboutOpen ? " is-active" : "")
+                                }
+                                onClick={() => {
+                                    setSettingsOpen(false);
+                                    setAboutOpen(true);
+                                }}
+                                title="About Dogger"
+                            >
                                 &copy; 2026 PartRocks, Happy Coder.
-                            </div>
+                            </button>
                         )}
                     </div>
                 </aside>
@@ -370,7 +403,9 @@ function App() {
                             </button>
                         </div>
                     )}
-                    {settingsOpen ? (
+                    {aboutOpen ? (
+                        <AboutView onClose={() => setAboutOpen(false)} />
+                    ) : settingsOpen ? (
                         <SettingsView onClose={() => setSettingsOpen(false)} />
                     ) : loading ? (
                         <div className="empty-state">

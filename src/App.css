@@ -371,9 +371,23 @@ body,
 }
 
 .sidebar-footer {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
   padding: 8px 8px 4px;
   font-size: 11px;
+  font-family: inherit;
   color: var(--sidebar-muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.12s ease;
+}
+
+.sidebar-footer:hover,
+.sidebar-footer.is-active {
+  color: var(--sidebar-fg);
 }
 
 /* ---- Main area ---- */
@@ -792,6 +806,76 @@ code {
 .breadcrumb {
   margin-bottom: 12px;
   font-size: 13px;
+}
+
+/* ---- About screen ---- */
+.about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 24px;
+  max-width: 460px;
+  margin: 24px auto 0;
+}
+
+.about-logo {
+  width: 72px;
+  height: 72px;
+  color: var(--accent);
+}
+
+.about-name {
+  margin: 16px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.about-tagline {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.about-version {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: "SFMono-Regular", ui-monospace, Menlo, monospace;
+}
+
+.about-meta {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  width: 100%;
+}
+
+.about-product {
+  margin: 0;
+  font-size: 14px;
+}
+
+.about-author {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.about-author a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.about-author a:hover {
+  text-decoration: underline;
+}
+
+.about-copyright {
+  margin-top: 24px;
+  font-size: 11px;
+  color: var(--muted);
 }
 
 /* ---- Task details form (task detail) ---- */
