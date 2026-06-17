@@ -2,6 +2,7 @@
 // keeps every byte Dogger manages under `~/.dogger` (never inside a project's
 // own codebase — see context/rules.md).
 
+mod ai;
 mod docker;
 mod storage;
 mod tray;
@@ -136,6 +137,38 @@ fn run_task(
     docker::run_task(app, &project_id, &task_id, &container, &run_id)
 }
 
+/// Start an AI task generation. Validates configuration up front (returning a
+/// clear error for the UI), then streams progress via the `ai-*` events; see
+/// `ai::generate_task`.
+#[tauri::command]
+fn generate_task(
+    app: tauri::AppHandle,
+    project_id: String,
+    task_id: String,
+    gen_id: String,
+    model: String,
+    prompt: String,
+    history: Vec<ai::AiMessage>,
+) -> Result<(), String> {
+    ai::generate_task(
+        app,
+        &project_id,
+        &task_id,
+        &gen_id,
+        &model,
+        &prompt,
+        history,
+    )
+}
+
+/// Request cancellation of an in-flight AI generation. A no-op if the
+/// generation already finished. The running agent loop stops at its next
+/// checkpoint and emits an `ai-finished` event with `status: "cancelled"`.
+#[tauri::command]
+fn cancel_generation(gen_id: String) {
+    ai::cancel_generation(&gen_id);
+}
+
 /// Refresh the tray's "online projects" submenu. Called by the frontend (the
 /// single Docker poller) whenever the set of online projects/tasks changes.
 #[tauri::command]
@@ -256,6 +289,8 @@ pub fn run() {
             detect_container_shell,
             list_runs,
             run_task,
+            generate_task,
+            cancel_generation,
             set_tray_menu,
             get_settings,
             save_settings,

@@ -3,7 +3,7 @@
 // `~/.dogger`; the UI only ever talks to disk through these functions.
 
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import type {
   DockerStatus,
@@ -188,6 +188,112 @@ export function onRunFinished(
   );
 }
 
+// ---- Phase 3: AI task generation -------------------------------------------
+
+/**
+ * One turn of prior conversation, sent back to the agent as context. Tool
+ * rounds stay internal to a single generation, so history is just plain
+ * `user`/`assistant` text turns (a deliberate v1 simplification).
+ */
+export interface AiMessage {
+  role: "user" | "assistant";
+  text: string;
+}
+
+/**
+ * A user-selectable model. Mirrors the hardcoded list in `src-tauri/src/ai.rs`
+ * (`ai::models`); `id` is sent verbatim to {@link generateTask}. The first
+ * entry is treated as the default selection.
+ */
+export interface AiModel {
+  id: string;
+  label: string;
+  provider: "openAi";
+}
+
+/** Models offered in the Generate tab, in display order. */
+export const AI_MODELS: AiModel[] = [
+  { id: "gpt-5.5", label: "GPT-5.5", provider: "openAi" },
+  { id: "gpt-4o", label: "GPT-4o", provider: "openAi" },
+  { id: "gpt-4o-mini", label: "GPT-4o mini", provider: "openAi" },
+  { id: "gpt-4.1", label: "GPT-4.1", provider: "openAi" },
+  { id: "gpt-4.1-mini", label: "GPT-4.1 mini", provider: "openAi" },
+];
+
+/**
+ * Kick off an AI task generation. Resolves once the request has been validated
+ * and the background agent loop has started; all further progress arrives via
+ * the `ai-*` events ({@link onAiOutput} / {@link onAiTool} / {@link onAiFinished}).
+ */
+export function generateTask(input: {
+  projectId: string;
+  taskId: string;
+  genId: string;
+  model: string;
+  prompt: string;
+  history: AiMessage[];
+}): Promise<void> {
+  return invoke("generate_task", {
+    projectId: input.projectId,
+    taskId: input.taskId,
+    genId: input.genId,
+    model: input.model,
+    prompt: input.prompt,
+    history: input.history,
+  });
+}
+
+/** Request cancellation of an in-flight generation by its `genId`. */
+export function cancelGeneration(genId: string): Promise<void> {
+  return invoke("cancel_generation", { genId });
+}
+
+/** Streamed assistant text delta for an in-flight generation. */
+export interface AiOutputEvent {
+  genId: string;
+  delta: string;
+}
+
+/** Tool activity, so the UI can show "Read src/index.ts" etc. */
+export interface AiToolEvent {
+  genId: string;
+  tool: string;
+  summary: string;
+  phase: "running" | "done" | "error";
+}
+
+/** Emitted exactly once when a generation ends (or fails to start). */
+export interface AiFinishedEvent {
+  genId: string;
+  status: "success" | "error" | "cancelled";
+  message?: string;
+}
+
+/** Subscribe to streamed assistant text deltas for AI task generation. */
+export function onAiOutput(
+  handler: (event: AiOutputEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<AiOutputEvent>("dogger://ai-output", (e) =>
+    handler(e.payload),
+  );
+}
+
+/** Subscribe to the agent's tool-activity updates. */
+export function onAiTool(
+  handler: (event: AiToolEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<AiToolEvent>("dogger://ai-tool", (e) => handler(e.payload));
+}
+
+/** Subscribe to generation-finished notifications (final status + message). */
+export function onAiFinished(
+  handler: (event: AiFinishedEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<AiFinishedEvent>("dogger://ai-finished", (e) =>
+    handler(e.payload),
+  );
+}
+
 // ---- Tray menu -------------------------------------------------------------
 
 /** A task as surfaced in the tray menu (subset of {@link Task}). */
@@ -241,6 +347,16 @@ export function saveSettings(settings: Settings): Promise<void> {
  */
 export function onOpenSettings(handler: () => void): Promise<UnlistenFn> {
   return listen("dogger://open-settings", () => handler());
+}
+
+/**
+ * Ask the app to navigate to the Settings screen. Emits the same event the tray
+ * uses, which the root `App` already listens for — so any component (e.g. the
+ * Generate tab's token error) can route the user to Settings without prop
+ * drilling a callback down the tree.
+ */
+export function requestOpenSettings(): Promise<void> {
+  return emit("dogger://open-settings");
 }
 
 /**

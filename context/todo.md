@@ -89,8 +89,13 @@ Update this after each meaningful step.
 - [x] Main window hides on close (tray Show/Hide brings it back); Quit exits.
       Runner windows covered by a `runner-*` capability.
 
-## Phase 3 (AI — not started)
-- [ ] Generate/edit tasks from natural language.
+## Phase 3 (AI — in progress)
+- [x] Generate tasks from natural language: a "Generate" tab on the task view
+      runs a tool-using OpenAI agent in Rust (`src-tauri/src/ai.rs`;
+      `generate_task` command) that reads the project's read-only codebase
+      (`list_dir`/`read_file`) and writes task files (`write_task_file`),
+      streaming text + tool activity to the UI via `dogger://ai-*` events
+      (`GenerateTab.tsx`). Written files appear live in the Build tab.
 - [ ] Summarise run output and suggest fixes.
 
 ## Open questions

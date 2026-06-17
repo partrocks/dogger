@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeftIcon, PlusIcon } from "@heroicons/react/24/outline";
+import {
+    ArrowLeftIcon,
+    PlusIcon,
+    SparklesIcon,
+} from "@heroicons/react/24/outline";
 import { PlayIcon } from "@heroicons/react/24/solid";
 import Editor from "react-simple-code-editor";
 import type { Project, RunRecord, ShellInfo, Task } from "../types";
@@ -9,6 +13,7 @@ import { RunConsole } from "./RunConsole";
 import { RunHistory } from "./RunHistory";
 import { PromptDialog } from "./PromptDialog";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { GenerateTab } from "./GenerateTab";
 
 export function TaskDetail({
     project,
@@ -27,6 +32,7 @@ export function TaskDetail({
     onChanged: () => void;
     onDeleted: () => void;
 }) {
+    const [activeTab, setActiveTab] = useState<"build" | "generate">("build");
     const [files, setFiles] = useState<string[]>([]);
     const [activeFile, setActiveFile] = useState<string | null>(null);
     const [contents, setContents] = useState("");
@@ -291,84 +297,122 @@ export function TaskDetail({
                 </div>
             </section>
 
-            <div className="file-editor">
-                <div className="file-list">
-                    <div className="file-list-head">
-                        <span>Files</span>
-                        <button
-                            className="icon-button icon-button--light"
-                            title="New file"
-                            aria-label="New file"
-                            onClick={() => setAddFileOpen(true)}
-                        >
-                            <PlusIcon className="ic-lg" />
-                        </button>
-                    </div>
-                    {files.length === 0 ? (
-                        <p className="muted file-empty">No files.</p>
-                    ) : (
-                        files.map((f) => (
-                            <button
-                                key={f}
-                                className={
-                                    "file-item" +
-                                    (f === activeFile ? " is-active" : "")
-                                }
-                                onClick={() => setActiveFile(f)}
-                            >
-                                {f}
-                                {f === activeFile && dirty ? " •" : ""}
-                            </button>
-                        ))
-                    )}
+            <div className="task-tabs">
+                <div className="task-tab-strip" role="tablist">
+                    <button
+                        role="tab"
+                        aria-selected={activeTab === "build"}
+                        className={
+                            "task-tab" +
+                            (activeTab === "build" ? " is-active" : "")
+                        }
+                        onClick={() => setActiveTab("build")}
+                    >
+                        Build
+                    </button>
+                    <button
+                        role="tab"
+                        aria-selected={activeTab === "generate"}
+                        className={
+                            "task-tab" +
+                            (activeTab === "generate" ? " is-active" : "")
+                        }
+                        onClick={() => setActiveTab("generate")}
+                    >
+                        <SparklesIcon className="ic-sm" />
+                        Generate
+                    </button>
                 </div>
 
-                <div className="file-content">
-                    {activeFile ? (
-                        <>
-                            <div className="file-content-head">
-                                <code>{activeFile}</code>
-                                <div className="file-content-head-actions">
-                                    {languageLabel(activeFile) && (
-                                        <span className="lang-badge">
-                                            {languageLabel(activeFile)}
-                                        </span>
-                                    )}
+                {activeTab === "build" ? (
+                    <div className="file-editor">
+                        <div className="file-list">
+                            <div className="file-list-head">
+                                <span>Files</span>
+                                <button
+                                    className="icon-button icon-button--light"
+                                    title="New file"
+                                    aria-label="New file"
+                                    onClick={() => setAddFileOpen(true)}
+                                >
+                                    <PlusIcon className="ic-lg" />
+                                </button>
+                            </div>
+                            {files.length === 0 ? (
+                                <p className="muted file-empty">No files.</p>
+                            ) : (
+                                files.map((f) => (
                                     <button
-                                        className="primary-button"
-                                        onClick={save}
-                                        disabled={busy || !dirty}
+                                        key={f}
+                                        className={
+                                            "file-item" +
+                                            (f === activeFile
+                                                ? " is-active"
+                                                : "")
+                                        }
+                                        onClick={() => setActiveFile(f)}
                                     >
-                                        {busy
-                                            ? "Saving…"
-                                            : dirty
-                                              ? "Save"
-                                              : "Saved"}
+                                        {f}
+                                        {f === activeFile && dirty ? " •" : ""}
                                     </button>
-                                </div>
-                            </div>
-                            <div className="code-editor-wrap">
-                                <Editor
-                                    className="code-editor"
-                                    value={contents}
-                                    onValueChange={(code) => {
-                                        setContents(code);
-                                        setDirty(true);
-                                    }}
-                                    highlight={(code) =>
-                                        highlightCode(code, activeFile)
-                                    }
-                                    padding={12}
-                                    tabSize={2}
-                                />
-                            </div>
-                        </>
-                    ) : (
-                        <div className="empty-state">
-                            <p>Select or add a file.</p>
+                                ))
+                            )}
                         </div>
-                    )}
-                </div>
+
+                        <div className="file-content">
+                            {activeFile ? (
+                                <>
+                                    <div className="file-content-head">
+                                        <code>{activeFile}</code>
+                                        <div className="file-content-head-actions">
+                                            {languageLabel(activeFile) && (
+                                                <span className="lang-badge">
+                                                    {languageLabel(activeFile)}
+                                                </span>
+                                            )}
+                                            <button
+                                                className="primary-button"
+                                                onClick={save}
+                                                disabled={busy || !dirty}
+                                            >
+                                                {busy
+                                                    ? "Saving…"
+                                                    : dirty
+                                                      ? "Save"
+                                                      : "Saved"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div className="code-editor-wrap">
+                                        <Editor
+                                            className="code-editor"
+                                            value={contents}
+                                            onValueChange={(code) => {
+                                                setContents(code);
+                                                setDirty(true);
+                                            }}
+                                            highlight={(code) =>
+                                                highlightCode(code, activeFile)
+                                            }
+                                            padding={12}
+                                            tabSize={2}
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="empty-state">
+                                    <p>Select or add a file.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <GenerateTab
+                        project={project}
+                        task={task}
+                        onGenerated={() => loadFiles()}
+                    />
+                )}
             </div>
 
             <RunHistory runs={runs} />

@@ -262,6 +262,49 @@ one submenu per **online** project listing that project's tasks · separator ·
   like the neighbouring status icons (rather than showing the full colored app
   icon). Requires the `tray-icon` + `image-png` Cargo features on `tauri`.
 
+## 2026-06-17 — Phase 3: AI task generation runs a tool-using agent in Rust
+The task view gains a **Generate** tab (alongside **Build**) that drives a
+Cursor-style agent chat. The agent loop lives in Rust (`src-tauri/src/ai.rs`),
+not the webview, for two reasons: it keeps the OpenAI token off the frontend
+(loaded from `~/.dogger/config.json` via `storage::load_settings`), and it
+sidesteps the app's content-security policy on outbound HTTP.
+
+- **Streaming mirrors `docker::run_task`.** `generate_task` validates config
+  synchronously (clear UI error if the token is missing), then spawns a
+  background thread that POSTs to the provider with `stream: true` and parses
+  the SSE deltas with `reqwest::blocking` + `BufReader`. Progress is emitted as
+  Tauri events keyed by a client-generated `genId`: `dogger://ai-output`
+  (text deltas), `dogger://ai-tool` (`running`→`done`/`error` per tool call),
+  `dogger://ai-finished` (terminal status). `GenerateTab.tsx` attaches its
+  listeners *before* invoking (same listen-before-invoke guard as `RunConsole`)
+  and tears them down on finish/unmount.
+- **Provider abstraction, OpenAI-only for now.** A `Provider` enum + a hardcoded
+  `Model` list (`ai::models`, mirrored as `AI_MODELS` in `api.ts`) leave adding
+  Anthropic/OpenRouter later to a new enum arm and list entries; the agent loop
+  is provider-agnostic. Only OpenAI is wired.
+- **Read-only codebase, write-only task dir (Rule 1 holds structurally).** The
+  agent's only inspection tools are codebase-scoped `list_dir`/`read_file`,
+  rooted at `project.codebasePath` and guarded by `resolve_within` (canonicalise
+  + verify the result stays under the base, blocking `..`/symlink escape;
+  `read_file` is size-capped). Its only *writable* surface is the task directory,
+  reached through the existing `storage::write_task_file`/`list_task_files`/
+  `read_task_file` (single-level names enforced by `sanitize_component`,
+  `main.sh` auto-chmod). The system prompt restates the contract: codebase is
+  strictly read-only; `main.sh` is the required entrypoint
+  (`#!/usr/bin/env bash` + `set -euo pipefail`); reference siblings via
+  `"$DOGGER_TASK_DIR/<file>"`. The agent ↔ tool loop is capped at 20 iterations.
+- **Ephemeral chat (v1).** The chat thread lives only while the tab is mounted;
+  it is not persisted across task reopen. History sent back to the agent is
+  plain `user`/`assistant` text turns — tool rounds stay internal to a single
+  send (a deliberate simplification). On finish, `GenerateTab` calls the task
+  view's existing `loadFiles()` so newly written files show up live in Build. A
+  notice warns when no OpenAI token is set, or when the project has no codebase
+  path (the agent can still write files from the description, just not inspect
+  the codebase).
+
 ## Open questions
 - (resolved) **Output streaming:** stream `main.sh` stdout/stderr live into the
   UI — done via Tauri events in Phase 2 (see above).
+- **Run-output summarisation / fix suggestions:** the second Phase 3 bullet is
+  not started. A codebase `search`/grep agent tool and multi-provider tokens in
+  Settings are also deferred (the provider abstraction is ready for the latter).
