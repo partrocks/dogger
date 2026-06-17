@@ -2,6 +2,8 @@
   "name": "dogger",
   "private": true,
   "version": "0.1.0",
+  "license": "GPL-3.0-or-later",
+  "author": "Paul Rooney <paulroon@gmail.com>",
   "type": "module",
   "scripts": {
     "dev": "vite",
