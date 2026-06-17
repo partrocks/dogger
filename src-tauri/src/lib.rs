@@ -169,6 +169,13 @@ fn cancel_generation(gen_id: String) {
     ai::cancel_generation(&gen_id);
 }
 
+/// Transcribe a short dictation clip recorded in the webview to text via
+/// OpenAI. The API token stays in Rust; see `ai::transcribe_audio`.
+#[tauri::command]
+fn transcribe_audio(audio_base64: String, mime_type: String) -> Result<String, String> {
+    ai::transcribe_audio(&audio_base64, &mime_type)
+}
+
 /// Refresh the tray's "online projects" submenu. Called by the frontend (the
 /// single Docker poller) whenever the set of online projects/tasks changes.
 #[tauri::command]
@@ -291,6 +298,7 @@ pub fn run() {
             run_task,
             generate_task,
             cancel_generation,
+            transcribe_audio,
             set_tray_menu,
             get_settings,
             save_settings,

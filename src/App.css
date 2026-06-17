@@ -1367,6 +1367,49 @@ code {
   gap: 10px;
 }
 
+.chat-composer-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* While recording, the mic button reads as "live" with a pulsing red icon. */
+.chat-mic--recording {
+  color: #c0392b;
+  border-color: rgba(192, 57, 43, 0.35);
+}
+
+.chat-mic--recording .ic {
+  animation: chat-mic-pulse 1.2s ease-in-out infinite;
+}
+
+.chat-mic-spin {
+  animation: chat-mic-spin 0.8s linear infinite;
+}
+
+@keyframes chat-mic-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes chat-mic-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-mic--recording .ic,
+  .chat-mic-spin {
+    animation: none;
+  }
+}
+
 /* ---- Modal ---- */
 .modal-overlay {
   position: fixed;

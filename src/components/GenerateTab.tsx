@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
+    ArrowPathIcon,
+    MicrophoneIcon,
     PaperAirplaneIcon,
     SparklesIcon,
     StopIcon,
@@ -64,6 +66,14 @@ export function GenerateTab({
     const [hasToken, setHasToken] = useState<boolean | null>(null);
     const hasCodebase = !!project.codebasePath.trim();
 
+    // Dictation: capture audio in the webview, transcribe it in Rust (keeping
+    // the OpenAI token off the frontend), then append the text to the input.
+    const [recording, setRecording] = useState(false);
+    const [transcribing, setTranscribing] = useState(false);
+    const recorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const audioStreamRef = useRef<MediaStream | null>(null);
+
     const threadRef = useRef<HTMLDivElement | null>(null);
     // Unlisten callbacks for the in-flight generation, cleared on finish.
     const unlistenRef = useRef<Array<() => void>>([]);
@@ -80,11 +90,15 @@ export function GenerateTab({
         };
     }, []);
 
-    // Tear down any live listeners when the tab unmounts.
+    // Tear down any live listeners — and stop a dangling mic stream — when the
+    // tab unmounts mid-recording.
     useEffect(() => {
         return () => {
             unlistenRef.current.forEach((fn) => fn());
             unlistenRef.current = [];
+            const recorder = recorderRef.current;
+            if (recorder && recorder.state !== "inactive") recorder.stop();
+            audioStreamRef.current?.getTracks().forEach((t) => t.stop());
         };
     }, []);
 
@@ -250,6 +264,108 @@ export function GenerateTab({
         api.requestOpenSettings().catch(() => {});
     }
 
+    // ---- Dictation ---------------------------------------------------------
+
+    // Pick a recording container the webview actually supports. WebKit (macOS)
+    // records `audio/mp4`; Chromium-based webviews record `audio/webm`. We let
+    // the recorder choose its default when none of these is advertised.
+    function pickAudioMimeType(): string | undefined {
+        if (typeof MediaRecorder === "undefined") return undefined;
+        const candidates = ["audio/webm", "audio/mp4", "audio/ogg"];
+        return candidates.find((t) => MediaRecorder.isTypeSupported(t));
+    }
+
+    // Strip the `data:<mime>;base64,` prefix that `readAsDataURL` adds, leaving
+    // just the base64 payload the backend expects.
+    function blobToBase64(blob: Blob): Promise<string> {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () =>
+                reject(reader.error ?? new Error("could not read the recording"));
+            reader.onloadend = () => {
+                const result = String(reader.result ?? "");
+                const comma = result.indexOf(",");
+                resolve(comma >= 0 ? result.slice(comma + 1) : result);
+            };
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    async function startRecording() {
+        if (recording || transcribing || busy || tokenMissing) return;
+        setError(null);
+        if (!navigator.mediaDevices?.getUserMedia) {
+            setError("Microphone recording isn't available in this environment.");
+            return;
+        }
+        let stream: MediaStream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch {
+            setError(
+                "Couldn't access the microphone. Grant Dogger microphone access in System Settings → Privacy & Security → Microphone.",
+            );
+            return;
+        }
+        audioStreamRef.current = stream;
+        audioChunksRef.current = [];
+        const mimeType = pickAudioMimeType();
+        const recorder = new MediaRecorder(
+            stream,
+            mimeType ? { mimeType } : undefined,
+        );
+        recorderRef.current = recorder;
+        recorder.ondataavailable = (e) => {
+            if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+        recorder.onstop = () => void finishRecording();
+        recorder.start();
+        setRecording(true);
+    }
+
+    function stopRecording() {
+        const recorder = recorderRef.current;
+        if (recorder && recorder.state !== "inactive") recorder.stop();
+        setRecording(false);
+    }
+
+    // Invoked once the recorder has flushed its final chunk: assemble the clip,
+    // hand it to the backend for transcription, and append the result.
+    async function finishRecording() {
+        audioStreamRef.current?.getTracks().forEach((t) => t.stop());
+        audioStreamRef.current = null;
+        const recorder = recorderRef.current;
+        recorderRef.current = null;
+        const chunks = audioChunksRef.current;
+        audioChunksRef.current = [];
+        if (chunks.length === 0) return;
+
+        const mimeType = recorder?.mimeType || chunks[0]?.type || "audio/webm";
+        const blob = new Blob(chunks, { type: mimeType });
+
+        setTranscribing(true);
+        try {
+            const audioBase64 = await blobToBase64(blob);
+            const text = (
+                await api.transcribeAudio({ audioBase64, mimeType })
+            ).trim();
+            if (text) {
+                setInput((prev) =>
+                    prev.trim() ? `${prev.trimEnd()} ${text}` : text,
+                );
+            }
+        } catch (e) {
+            setError(String(e));
+        } finally {
+            setTranscribing(false);
+        }
+    }
+
+    function toggleRecording() {
+        if (recording) stopRecording();
+        else void startRecording();
+    }
+
     function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -359,19 +475,52 @@ export function GenerateTab({
                     onKeyDown={onKeyDown}
                 />
                 <div className="chat-composer-foot">
-                    <select
-                        className="container-select"
-                        value={model}
-                        disabled={busy}
-                        onChange={(e) => setModel(e.target.value)}
-                        aria-label="Model"
-                    >
-                        {AI_MODELS.map((mdl) => (
-                            <option key={mdl.id} value={mdl.id}>
-                                {mdl.label}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="chat-composer-tools">
+                        <select
+                            className="container-select"
+                            value={model}
+                            disabled={busy}
+                            onChange={(e) => setModel(e.target.value)}
+                            aria-label="Model"
+                        >
+                            {AI_MODELS.map((mdl) => (
+                                <option key={mdl.id} value={mdl.id}>
+                                    {mdl.label}
+                                </option>
+                            ))}
+                        </select>
+                        <button
+                            type="button"
+                            className={
+                                "ghost-button chat-mic" +
+                                (recording ? " chat-mic--recording" : "")
+                            }
+                            onClick={toggleRecording}
+                            disabled={busy || tokenMissing || transcribing}
+                            aria-pressed={recording}
+                            aria-label={
+                                recording ? "Stop dictation" : "Dictate"
+                            }
+                            title={
+                                tokenMissing
+                                    ? "Add your OpenAI token in Settings to dictate"
+                                    : recording
+                                      ? "Stop dictation"
+                                      : "Dictate your message"
+                            }
+                        >
+                            {transcribing ? (
+                                <ArrowPathIcon className="ic chat-mic-spin" />
+                            ) : (
+                                <MicrophoneIcon className="ic" />
+                            )}
+                            {transcribing
+                                ? "Transcribing…"
+                                : recording
+                                  ? "Recording…"
+                                  : "Dictate"}
+                        </button>
+                    </div>
                     {busy ? (
                         <button
                             className="ghost-button ghost-button--danger"

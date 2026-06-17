@@ -49,6 +49,14 @@ impl Provider {
         }
     }
 
+    /// Base URL of the provider's audio-transcriptions endpoint, used by the
+    /// Generate tab's dictation button.
+    pub fn audio_transcriptions_url(self) -> &'static str {
+        match self {
+            Provider::OpenAi => "https://api.openai.com/v1/audio/transcriptions",
+        }
+    }
+
     /// Stable string id used when (de)serialising a [`Model`] reference across
     /// the Tauri boundary. Mirrors the `camelCase` serde tag above.
     pub fn id(self) -> &'static str {
@@ -699,6 +707,97 @@ fn stream_completion(
         content,
         tool_calls,
     })
+}
+
+// ---- Dictation / transcription ----------------------------------------------
+
+/// Transcription model used by the Generate tab's dictation button. `whisper-1`
+/// is available to every account with API access, so it avoids surprising
+/// "model not found" failures that a newer transcription model might cause.
+const TRANSCRIBE_MODEL: &str = "whisper-1";
+
+/// Map a recorder MIME type to an `(file_name, mime)` pair for the multipart
+/// upload. OpenAI keys the audio format off the file extension, so we hand it a
+/// name that matches the bytes. WebKit (the macOS webview) records `audio/mp4`;
+/// Chromium-based webviews record `audio/webm`. Anything unknown falls back to
+/// webm, which covers the common case without rejecting the upload outright.
+fn audio_upload_meta(mime_type: &str) -> (&'static str, &'static str) {
+    // Strip any `;codecs=…` parameter the recorder may append.
+    let base = mime_type.split(';').next().unwrap_or("").trim();
+    match base {
+        "audio/mp4" | "audio/x-m4a" | "audio/aac" => ("audio.mp4", "audio/mp4"),
+        "audio/mpeg" | "audio/mp3" => ("audio.mp3", "audio/mpeg"),
+        "audio/wav" | "audio/x-wav" => ("audio.wav", "audio/wav"),
+        "audio/ogg" | "audio/oga" => ("audio.ogg", "audio/ogg"),
+        _ => ("audio.webm", "audio/webm"),
+    }
+}
+
+/// Transcribe a short dictation clip (captured by the webview's microphone
+/// button) to text via OpenAI's audio-transcriptions endpoint. Done in Rust so
+/// the API token stays off the frontend, mirroring [`generate_task`].
+///
+/// `audio_base64` is the raw recording, base64-encoded (no `data:` URL prefix);
+/// `mime_type` is the recorder blob's type, used only to label the upload.
+pub fn transcribe_audio(audio_base64: &str, mime_type: &str) -> Result<String, String> {
+    use base64::Engine;
+
+    let token = storage::load_settings()?.openai_token.trim().to_string();
+    if token.is_empty() {
+        return Err("Add your OpenAI token in Settings to use dictation.".to_string());
+    }
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(audio_base64.trim())
+        .map_err(|e| format!("could not decode the recorded audio: {e}"))?;
+    if bytes.is_empty() {
+        return Err("the recording was empty — nothing to transcribe.".to_string());
+    }
+
+    let (file_name, mime) = audio_upload_meta(mime_type);
+    let part = reqwest::blocking::multipart::Part::bytes(bytes)
+        .file_name(file_name)
+        .mime_str(mime)
+        .map_err(|e| format!("invalid audio content type: {e}"))?;
+    let form = reqwest::blocking::multipart::Form::new()
+        .text("model", TRANSCRIBE_MODEL)
+        .part("file", part);
+
+    let client = reqwest::blocking::Client::builder()
+        .connect_timeout(CONNECT_TIMEOUT)
+        .timeout(REQUEST_TIMEOUT)
+        .build()
+        .map_err(|e| format!("could not create HTTP client: {e}"))?;
+
+    let resp = client
+        .post(Provider::OpenAi.audio_transcriptions_url())
+        .header("Authorization", format!("Bearer {token}"))
+        .multipart(form)
+        .send()
+        .map_err(|e| format!("the transcription request failed: {e}"))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+            return Err(
+                "Your OpenAI token was rejected (it may be invalid, expired, or lacking access \
+                 to transcription). Update it in Settings and try again."
+                    .to_string(),
+            );
+        }
+        let detail = resp.text().unwrap_or_default();
+        let detail = detail.trim();
+        return Err(if detail.is_empty() {
+            format!("transcription failed ({status})")
+        } else {
+            format!("transcription failed ({status}): {detail}")
+        });
+    }
+
+    let body: Value = resp
+        .json()
+        .map_err(|e| format!("could not parse the transcription response: {e}"))?;
+    Ok(body["text"].as_str().unwrap_or_default().trim().to_string())
 }
 
 // ---- Agent loop -------------------------------------------------------------

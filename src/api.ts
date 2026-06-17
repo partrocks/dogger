@@ -248,6 +248,23 @@ export function cancelGeneration(genId: string): Promise<void> {
   return invoke("cancel_generation", { genId });
 }
 
+/**
+ * Transcribe a short dictation recording to text via OpenAI (the token stays in
+ * Rust, matching {@link generateTask}). `audioBase64` is the recorded blob's
+ * bytes, base64-encoded with no `data:` URL prefix; `mimeType` is the blob's
+ * MIME type so the backend can label the upload's format correctly. Resolves
+ * with the recognised text, which may be an empty string for silent input.
+ */
+export function transcribeAudio(input: {
+  audioBase64: string;
+  mimeType: string;
+}): Promise<string> {
+  return invoke("transcribe_audio", {
+    audioBase64: input.audioBase64,
+    mimeType: input.mimeType,
+  });
+}
+
 /** Streamed assistant text delta for an in-flight generation. */
 export interface AiOutputEvent {
   genId: string;
