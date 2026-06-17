@@ -1430,3 +1430,33 @@ code {
   justify-content: center;
   gap: 6px;
 }
+
+/* ---- Zoom indicator ----
+   A subtle, temporary pill shown top-center while changing the UI scale via
+   Cmd+/Cmd-/Cmd+0. Counter-scaled in JS so it stays a constant size. */
+.zoom-indicator {
+  position: fixed;
+  top: 48px;
+  left: 50%;
+  z-index: 2000;
+  padding: 5px 13px;
+  border-radius: 999px;
+  background: rgba(29, 31, 35, 0.82);
+  color: #f4f5f7;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.28);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -6px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.zoom-indicator.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}

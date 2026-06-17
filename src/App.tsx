@@ -13,6 +13,8 @@ import { ProjectView } from "./components/ProjectView";
 import { EmptyState } from "./components/EmptyState";
 import { NewProjectDialog } from "./components/NewProjectDialog";
 import { DoggerMark } from "./components/DoggerMark";
+import { ZoomIndicator } from "./components/ZoomIndicator";
+import { useZoom } from "./useZoom";
 import "./App.css";
 
 // Dogger UI, backed by on-disk state under `~/.dogger` (via the Rust commands
@@ -32,6 +34,8 @@ function App() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [newProjectOpen, setNewProjectOpen] = useState(false);
+
+    const zoom = useZoom();
 
     const [docker, setDocker] = useState<DockerStatus | null>(null);
     const [running, setRunning] = useState<RunningContainer[] | null>(null);
@@ -120,6 +124,7 @@ function App() {
     if (dockerUnavailable && !dockerDismissed) {
         return (
             <div className="window">
+                <ZoomIndicator {...zoom} />
                 <Titlebar />
                 <DockerWarning
                     status={docker}
@@ -143,6 +148,7 @@ function App() {
 
     return (
         <div className="window">
+            <ZoomIndicator {...zoom} />
             <Titlebar />
             <div className="app">
                 <aside
