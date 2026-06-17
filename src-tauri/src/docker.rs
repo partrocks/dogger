@@ -13,9 +13,9 @@
 
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -76,13 +76,106 @@ fn now_millis() -> i64 {
         .unwrap_or(0)
 }
 
+/// The bare executable name we look for (`docker.exe` on Windows).
+#[cfg(windows)]
+const DOCKER_EXE: &str = "docker.exe";
+#[cfg(not(windows))]
+const DOCKER_EXE: &str = "docker";
+
+/// True when `path` points at an existing file we can execute. On Unix this
+/// checks the executable bit; elsewhere a regular file is good enough.
+fn is_executable(path: &Path) -> bool {
+    let Ok(meta) = fs::metadata(path) else {
+        return false;
+    };
+    if !meta.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        meta.permissions().mode() & 0o111 != 0
+    }
+    #[cfg(not(unix))]
+    {
+        true
+    }
+}
+
+/// Resolve the absolute path to the `docker` binary, cached for the process.
+///
+/// GUI apps launched from Finder/Dock on macOS do **not** inherit the user's
+/// shell `PATH` — they get a minimal `/usr/bin:/bin:/usr/sbin:/sbin`. Docker
+/// Desktop installs the CLI at `/usr/local/bin/docker` (Intel / its own
+/// symlink), `/opt/homebrew/bin/docker` (Apple Silicon Homebrew), or
+/// `~/.docker/bin/docker`, none of which are on that minimal `PATH`. So a bare
+/// `docker` lookup that works under `make dev` (launched from a terminal, which
+/// has the full shell `PATH`) fails in a bundled `.app`, producing the
+/// "Docker CLI was not found" screen. We therefore search the inherited `PATH`
+/// ourselves and fall back to the well-known install locations.
+fn docker_bin() -> &'static str {
+    static DOCKER_BIN: OnceLock<String> = OnceLock::new();
+    DOCKER_BIN.get_or_init(resolve_docker_bin)
+}
+
+fn resolve_docker_bin() -> String {
+    // Honour an explicit override first (handy for unusual installs / tests).
+    if let Some(p) = std::env::var_os("DOGGER_DOCKER_BIN") {
+        let p = PathBuf::from(p);
+        if is_executable(&p) {
+            return p.to_string_lossy().into_owned();
+        }
+    }
+
+    // Search whatever `PATH` we did inherit.
+    if let Some(path) = std::env::var_os("PATH") {
+        for dir in std::env::split_paths(&path) {
+            let candidate = dir.join(DOCKER_EXE);
+            if is_executable(&candidate) {
+                return candidate.to_string_lossy().into_owned();
+            }
+        }
+    }
+
+    // Fall back to common install locations a GUI `PATH` typically omits.
+    let mut fallbacks: Vec<PathBuf> = [
+        "/usr/local/bin/docker",
+        "/opt/homebrew/bin/docker",
+        "/usr/bin/docker",
+        "/opt/local/bin/docker",
+        "/Applications/Docker.app/Contents/Resources/bin/docker",
+    ]
+    .iter()
+    .map(PathBuf::from)
+    .collect();
+    if let Some(home) = dirs::home_dir() {
+        fallbacks.push(home.join(".docker/bin/docker"));
+    }
+    for candidate in fallbacks {
+        if is_executable(&candidate) {
+            return candidate.to_string_lossy().into_owned();
+        }
+    }
+
+    // Last resort: the bare name, so the failure mode (and its error message)
+    // is exactly what it was before this resolver existed.
+    DOCKER_EXE.to_string()
+}
+
+/// A `Command` for the resolved `docker` binary. Use this instead of
+/// `Command::new("docker")` everywhere so bundled `.app` launches (which lack
+/// the shell `PATH`) still find the CLI.
+fn docker_command() -> Command {
+    Command::new(docker_bin())
+}
+
 /// Probe the Docker CLI and daemon. Never returns an error — the whole point is
 /// to report the failure mode to the UI so it can show a warning screen.
 pub fn docker_status() -> DockerStatus {
     // `docker version --format {{.Server.Version}}` exits non-zero (and prints
     // to stderr) when the CLI exists but the daemon is unreachable, which lets
     // us distinguish "not installed" from "daemon down" in one call.
-    match Command::new("docker")
+    match docker_command()
         .args(["version", "--format", "{{.Server.Version}}"])
         .output()
     {
@@ -126,7 +219,7 @@ pub fn docker_status() -> DockerStatus {
 
 /// List running containers via `docker ps`.
 pub fn list_running_containers() -> Result<Vec<RunningContainer>, String> {
-    let output = Command::new("docker")
+    let output = docker_command()
         .args([
             "ps",
             "--no-trunc",
@@ -196,7 +289,7 @@ pub fn check_path(container: &str, path: &str) -> Result<bool, String> {
     }
     // `test -d` is run directly (no `sh -c`) so the path is passed as a single
     // argument and never needs shell quoting.
-    let output = Command::new("docker")
+    let output = docker_command()
         .args(["exec", container, "test", "-d", path])
         .output()
         .map_err(|e| format!("failed to run docker exec: {e}"))?;
@@ -233,7 +326,7 @@ fn probe_container_shells(container: &str) -> Vec<String> {
         .map(|s| format!("command -v {s} >/dev/null 2>&1 && echo {s}"))
         .collect::<Vec<_>>()
         .join("\n");
-    match Command::new("docker")
+    match docker_command()
         .args(["exec", container, "sh", "-c", &probe])
         .output()
     {
@@ -507,8 +600,8 @@ pub fn run_task(
 
         // 1. Make the destination dir and copy the task in.
         let prep = (|| -> std::result::Result<(), String> {
-            run_quiet(Command::new("docker").args(["exec", &container, "mkdir", "-p", &dest]))?;
-            run_quiet(Command::new("docker").args([
+            run_quiet(docker_command().args(["exec", &container, "mkdir", "-p", &dest]))?;
+            run_quiet(docker_command().args([
                 "cp",
                 &format!("{task_dir}/."),
                 &format!("{container}:{dest}"),
@@ -520,7 +613,7 @@ pub fn run_task(
                 fs::write(&tmp, &materialized_script)
                     .map_err(|e| format!("stage rewritten main.sh: {e}"))?;
                 let tmp_str = tmp.to_string_lossy().to_string();
-                let cp = run_quiet(Command::new("docker").args([
+                let cp = run_quiet(docker_command().args([
                     "cp",
                     &tmp_str,
                     &format!("{container}:{script}"),
@@ -548,7 +641,7 @@ pub fn run_task(
         }
 
         // 2. Run main.sh with the codebase root as the working directory.
-        let mut cmd = Command::new("docker");
+        let mut cmd = docker_command();
         cmd.arg("exec");
         if !working_dir.is_empty() {
             cmd.args(["-w", &working_dir]);
