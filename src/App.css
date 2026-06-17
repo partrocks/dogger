@@ -663,6 +663,16 @@ code {
   color: var(--muted);
 }
 
+.field-hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.field-hint code {
+  font-size: 11px;
+}
+
 .field input,
 .container-input {
   border: 1px solid var(--border);

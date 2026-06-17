@@ -4,7 +4,11 @@ import {
     EyeIcon,
     EyeSlashIcon,
 } from "@heroicons/react/24/outline";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import * as api from "../api";
+
+// Where users create the API key that goes in the field below.
+const OPENAI_KEYS_URL = "https://platform.openai.com/api-keys";
 
 // Full-screen Settings panel rendered into the app's main area (not a modal),
 // so it can be reached from the sidebar, the Cmd+, shortcut, or the tray's
@@ -125,6 +129,24 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
                                     )}
                                 </button>
                             </div>
+                            <span className="field-hint">
+                                Used by the task Generate tab. Create a secret
+                                key (it starts with <code>sk-</code>) at{" "}
+                                <button
+                                    type="button"
+                                    className="link-button"
+                                    onClick={() =>
+                                        void openUrl(OPENAI_KEYS_URL).catch(
+                                            () => {},
+                                        )
+                                    }
+                                >
+                                    platform.openai.com/api-keys
+                                </button>
+                                , then paste it here. Your key is stored locally
+                                in <code>~/.dogger/config.json</code> and is only
+                                sent to OpenAI.
+                            </span>
                         </label>
                     </div>
 
