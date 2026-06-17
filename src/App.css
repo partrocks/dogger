@@ -116,6 +116,31 @@ body,
   padding: 4px 0 16px;
 }
 
+/* The logo + name act as a "go home" button. Strip the default button chrome
+   so it reads as the heading it replaces. */
+.brand-home {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  margin: -4px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.brand-home:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar--collapsed .brand-home {
+  flex-direction: column;
+  gap: 10px;
+}
+
 .brand-mark {
   width: 26px;
   height: 26px;
@@ -301,9 +326,52 @@ body,
   color: var(--sidebar-muted);
 }
 
-.sidebar-footer {
+/* Bottom-anchored group holding the Settings action and copyright. */
+.sidebar-bottom {
   margin-top: auto;
-  padding: 12px 8px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 8px;
+}
+
+.sidebar-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--sidebar-fg);
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sidebar-action:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sidebar-action.is-active {
+  background: rgba(79, 124, 255, 0.18);
+}
+
+.sidebar-action .ic {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.sidebar--collapsed .sidebar-action {
+  justify-content: center;
+  padding: 8px 6px;
+}
+
+.sidebar-footer {
+  padding: 8px 8px 4px;
   font-size: 11px;
   color: var(--sidebar-muted);
 }
@@ -601,8 +669,44 @@ code {
 .form-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 10px;
   margin-top: 8px;
+}
+
+/* ---- Settings screen ---- */
+.setting-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.setting-toggle input {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.setting-toggle-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.setting-toggle-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.settings-saved {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f9b3a;
 }
 
 .path-input {

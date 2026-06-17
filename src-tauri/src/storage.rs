@@ -64,6 +64,38 @@ pub struct AppConfig {
     /// Last known main-window geometry, restored on startup.
     #[serde(default)]
     pub window: Option<WindowState>,
+    /// User-facing application settings (see the Settings screen).
+    #[serde(default)]
+    pub settings: Settings,
+}
+
+/// User-editable application settings surfaced on the Settings screen. Persisted
+/// inside the top-level [`AppConfig`] so everything Dogger remembers lives in
+/// one inspectable `config.json`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Settings {
+    /// Show the main window when Dogger launches. When `false`, Dogger starts
+    /// hidden in the menu-bar tray (reachable via "Show / Hide Dogger").
+    /// Defaults to `true` so a fresh install behaves like a normal app.
+    #[serde(default = "default_open_on_startup")]
+    pub open_on_startup: bool,
+    /// OpenAI API token. Stored verbatim in `config.json`.
+    #[serde(default)]
+    pub openai_token: String,
+}
+
+fn default_open_on_startup() -> bool {
+    true
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings {
+            open_on_startup: default_open_on_startup(),
+            openai_token: String::new(),
+        }
+    }
 }
 
 /// Persisted main-window geometry, in *logical* (DPI-independent) units so the
@@ -186,6 +218,19 @@ pub fn load_window_state() -> Result<Option<WindowState>> {
 pub fn save_window_state(state: WindowState) -> Result<()> {
     let mut config = load_app_config().unwrap_or_default();
     config.window = Some(state);
+    write_json(&config_path()?, &config)
+}
+
+/// The current user settings, defaulting when the config file is absent.
+pub fn load_settings() -> Result<Settings> {
+    Ok(load_app_config().unwrap_or_default().settings)
+}
+
+/// Persist user settings, preserving any other config fields (e.g. window
+/// geometry) by reading-modifying-writing the whole config.
+pub fn save_settings(settings: Settings) -> Result<()> {
+    let mut config = load_app_config().unwrap_or_default();
+    config.settings = settings;
     write_json(&config_path()?, &config)
 }
 

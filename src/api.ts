@@ -211,3 +211,34 @@ export interface TrayProject {
 export function setTrayMenu(projects: TrayProject[]): Promise<void> {
   return invoke("set_tray_menu", { projects });
 }
+
+// ---- Settings --------------------------------------------------------------
+
+/** User-editable settings, persisted in `~/.dogger/config.json`. */
+export interface Settings {
+  /**
+   * Show the main window on launch. When `false`, Dogger starts hidden in the
+   * tray. Takes effect on the next launch.
+   */
+  openOnStartup: boolean;
+  /** OpenAI API token. */
+  openaiToken: string;
+}
+
+/** Read the persisted settings. */
+export function getSettings(): Promise<Settings> {
+  return invoke("get_settings");
+}
+
+/** Persist settings to `~/.dogger/config.json`. */
+export function saveSettings(settings: Settings): Promise<void> {
+  return invoke("save_settings", { settings });
+}
+
+/**
+ * Subscribe to the tray's "Settings…" action, which asks the app to navigate to
+ * the Settings screen after bringing the main window forward.
+ */
+export function onOpenSettings(handler: () => void): Promise<UnlistenFn> {
+  return listen("dogger://open-settings", () => handler());
+}

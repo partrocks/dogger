@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ChevronDoubleLeftIcon,
     ChevronDoubleRightIcon,
+    Cog6ToothIcon,
     PlusIcon,
 } from "@heroicons/react/24/outline";
 import type { DockerStatus, Project, RunningContainer } from "./types";
@@ -12,6 +13,7 @@ import { DockerWarning } from "./components/DockerWarning";
 import { ProjectView } from "./components/ProjectView";
 import { EmptyState } from "./components/EmptyState";
 import { NewProjectDialog } from "./components/NewProjectDialog";
+import { SettingsView } from "./components/SettingsView";
 import { DoggerMark } from "./components/DoggerMark";
 import { ZoomIndicator } from "./components/ZoomIndicator";
 import { useZoom } from "./useZoom";
@@ -34,6 +36,11 @@ function App() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [newProjectOpen, setNewProjectOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    // When true, the main area shows the home screen (logo + "New project"
+    // CTA) regardless of which project is selected. Clicking the brand sets
+    // this; selecting a project clears it.
+    const [showHome, setShowHome] = useState(false);
 
     const zoom = useZoom();
 
@@ -107,6 +114,33 @@ function App() {
         refreshDocker();
     }, [refresh, refreshDocker]);
 
+    // Cmd/Ctrl+, opens Settings, matching the platform convention. The plain
+    // comma (no Shift/Alt) keeps it distinct from other shortcuts.
+    useEffect(() => {
+        function onKeyDown(e: KeyboardEvent) {
+            if (
+                (e.metaKey || e.ctrlKey) &&
+                !e.shiftKey &&
+                !e.altKey &&
+                e.key === ","
+            ) {
+                e.preventDefault();
+                setSettingsOpen(true);
+            }
+        }
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, []);
+
+    // The tray's "Settings…" item brings the window forward (Rust side) and
+    // emits this event so we land on the Settings screen.
+    useEffect(() => {
+        const unlisten = api.onOpenSettings(() => setSettingsOpen(true));
+        return () => {
+            unlisten.then((fn) => fn()).catch(() => {});
+        };
+    }, []);
+
     // Keep live container status reasonably fresh while Docker is reachable.
     useEffect(() => {
         if (!docker?.daemonRunning) return;
@@ -120,7 +154,10 @@ function App() {
 
     // Keep the macOS tray menu's "online projects" list in sync. The frontend
     // owns the single Docker poll, so it pushes the derived online set to the
-    // tray whenever projects or live container state change.
+    // tray whenever projects or live container state change. The poll fires
+    // every few seconds, so we skip the push when the derived set is unchanged
+    // to avoid needlessly rebuilding/swapping the native menu.
+    const lastTrayMenuRef = useRef<string>("");
     useEffect(() => {
         const online = projects
             .filter((p) => isProjectContainerRunning(p, running))
@@ -129,6 +166,9 @@ function App() {
                 name: p.name,
                 tasks: p.tasks.map((t) => ({ id: t.id, name: t.name })),
             }));
+        const signature = JSON.stringify(online);
+        if (signature === lastTrayMenuRef.current) return;
+        lastTrayMenuRef.current = signature;
         api.setTrayMenu(online).catch(() => {});
     }, [projects, running]);
 
@@ -157,6 +197,7 @@ function App() {
     }) {
         const created = await api.createProject(input);
         setNewProjectOpen(false);
+        setShowHome(false);
         await refresh(created.id);
     }
 
@@ -172,10 +213,20 @@ function App() {
                     }
                 >
                     <div className="brand">
-                        <DoggerMark className="brand-mark" />
-                        {!sidebarCollapsed && (
-                            <h1 className="brand-name">Dogger</h1>
-                        )}
+                        <button
+                            className="brand-home"
+                            title="Home"
+                            aria-label="Home"
+                            onClick={() => {
+                                setSettingsOpen(false);
+                                setShowHome(true);
+                            }}
+                        >
+                            <DoggerMark className="brand-mark" />
+                            {!sidebarCollapsed && (
+                                <h1 className="brand-name">Dogger</h1>
+                            )}
+                        </button>
                         <button
                             className="sidebar-toggle"
                             title={
@@ -226,7 +277,11 @@ function App() {
                                             ? " is-active"
                                             : "")
                                     }
-                                    onClick={() => setSelectedId(project.id)}
+                                    onClick={() => {
+                                        setSettingsOpen(false);
+                                        setShowHome(false);
+                                        setSelectedId(project.id);
+                                    }}
                                     title={
                                         sidebarCollapsed
                                             ? `${project.name} · ${taskLabel}`
@@ -278,11 +333,25 @@ function App() {
                             )}
                     </nav>
 
-                    {!sidebarCollapsed && (
-                        <div className="sidebar-footer">
-                            &copy; 2026 PartRocks, Happy Coder.
-                        </div>
-                    )}
+                    <div className="sidebar-bottom">
+                        <button
+                            className={
+                                "sidebar-action" +
+                                (settingsOpen ? " is-active" : "")
+                            }
+                            onClick={() => setSettingsOpen(true)}
+                            title="Settings"
+                            aria-label="Settings"
+                        >
+                            <Cog6ToothIcon className="ic" />
+                            {!sidebarCollapsed && <span>Settings</span>}
+                        </button>
+                        {!sidebarCollapsed && (
+                            <div className="sidebar-footer">
+                                &copy; 2026 PartRocks, Happy Coder.
+                            </div>
+                        )}
+                    </div>
                 </aside>
 
                 <main className="main">
@@ -301,11 +370,13 @@ function App() {
                             </button>
                         </div>
                     )}
-                    {loading ? (
+                    {settingsOpen ? (
+                        <SettingsView onClose={() => setSettingsOpen(false)} />
+                    ) : loading ? (
                         <div className="empty-state">
                             <p>Loading…</p>
                         </div>
-                    ) : selected ? (
+                    ) : selected && !showHome ? (
                         <ProjectView
                             key={selected.id}
                             project={selected}

@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 use tauri::{LogicalPosition, LogicalSize, Manager, WebviewWindow, Window, WindowEvent};
 
 use docker::{DockerStatus, RunningContainer, ShellInfo};
-use storage::{Project, RunRecord, Task, WindowState};
+use storage::{Project, RunRecord, Settings, Task, WindowState};
 use tray::TrayProject;
 
 #[tauri::command]
@@ -143,6 +143,20 @@ fn set_tray_menu(app: tauri::AppHandle, projects: Vec<TrayProject>) -> Result<()
     tray::update(&app, projects)
 }
 
+/// Read the persisted user settings for the Settings screen.
+#[tauri::command]
+fn get_settings() -> Result<Settings, String> {
+    storage::load_settings()
+}
+
+/// Persist user settings. The "open on startup" preference only takes effect on
+/// the next launch (it decides whether the main window is shown or stays hidden
+/// in the tray), so there is nothing to reconcile live here.
+#[tauri::command]
+fn save_settings(settings: Settings) -> Result<(), String> {
+    storage::save_settings(settings)
+}
+
 /// Apply the last persisted window geometry to the main window on startup.
 /// Best-effort: a missing/corrupt config just leaves the `tauri.conf.json`
 /// defaults in place.
@@ -190,8 +204,18 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // The main window is configured `visible: false` so we can decide
+            // here whether to reveal it or leave Dogger running quietly in the
+            // tray, based on the user's "open on startup" preference.
+            let open_on_startup = storage::load_settings()
+                .map(|s| s.open_on_startup)
+                .unwrap_or(true);
             if let Some(window) = app.get_webview_window("main") {
                 restore_window_state(&window);
+                if open_on_startup {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
             }
             tray::init(app.handle())?;
             Ok(())
@@ -233,6 +257,8 @@ pub fn run() {
             list_runs,
             run_task,
             set_tray_menu,
+            get_settings,
+            save_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
