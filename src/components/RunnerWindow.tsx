@@ -35,6 +35,13 @@ export function RunnerWindow({
     const [exitCode, setExitCode] = useState<number | null>(null);
     const [runError, setRunError] = useState<string | null>(null);
 
+    // Whether the "Auto-run" setting is on. `null` until settings load, so we
+    // don't kick off a run before we know the user's preference.
+    const [autoRun, setAutoRun] = useState<boolean | null>(null);
+    // Guards the one-shot auto-run so it fires at most once per window, even as
+    // Docker/container state churns the `canRun` flag.
+    const autoRanRef = useRef(false);
+
     const runIdRef = useRef<string | null>(null);
     const bodyRef = useRef<HTMLDivElement | null>(null);
 
@@ -77,6 +84,18 @@ export function RunnerWindow({
         refresh();
     }, [refresh]);
 
+    // Resolve the "Auto-run" preference once; failures fall back to "off" so a
+    // settings read error can't trap the user in an unexpected run.
+    useEffect(() => {
+        let cancelled = false;
+        api.getSettings()
+            .then((s) => !cancelled && setAutoRun(s.autoRun))
+            .catch(() => !cancelled && setAutoRun(false));
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     // Attach the streaming listeners once; they filter to the active run id so
     // re-runs (which mint a fresh id) don't pick up stale events.
     useEffect(() => {
@@ -107,7 +126,7 @@ export function RunnerWindow({
         if (el) el.scrollTop = el.scrollHeight;
     }, [lines]);
 
-    function run() {
+    const run = useCallback(() => {
         if (!project || !task || !container) return;
         const runId = newRunId();
         runIdRef.current = runId;
@@ -121,7 +140,18 @@ export function RunnerWindow({
                 setRunError(String(e));
                 setStatus("error");
             });
-    }
+    }, [project, task, container]);
+
+    // When "Auto-run" is enabled, start the task as soon as the window is ready
+    // to run it (Docker up, container online, task loaded). Fires once per
+    // window via `autoRanRef`; re-clicking a tray task just focuses the
+    // existing window, so it won't trigger a second automatic run.
+    useEffect(() => {
+        if (autoRun && canRun && !autoRanRef.current) {
+            autoRanRef.current = true;
+            run();
+        }
+    }, [autoRun, canRun, run]);
 
     const finished =
         status === "success" || status === "failed" || status === "error";

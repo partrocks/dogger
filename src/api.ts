@@ -344,6 +344,11 @@ export interface Settings {
    * tray. Takes effect on the next launch.
    */
   openOnStartup: boolean;
+  /**
+   * Automatically run a task when its runner window is opened from the tray.
+   * When `false`, the runner window opens idle and waits for the Run button.
+   */
+  autoRun: boolean;
   /** OpenAI API token. */
   openaiToken: string;
 }

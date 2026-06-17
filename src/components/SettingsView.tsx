@@ -17,6 +17,7 @@ const OPENAI_KEYS_URL = "https://platform.openai.com/api-keys";
 // commands.
 export function SettingsView({ onClose }: { onClose: () => void }) {
     const [openOnStartup, setOpenOnStartup] = useState(false);
+    const [autoRun, setAutoRun] = useState(false);
     const [openaiToken, setOpenaiToken] = useState("");
     const [showToken, setShowToken] = useState(false);
 
@@ -31,6 +32,7 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
             .then((s) => {
                 if (!alive) return;
                 setOpenOnStartup(s.openOnStartup);
+                setAutoRun(s.autoRun);
                 setOpenaiToken(s.openaiToken);
             })
             .catch((e) => alive && setErr(String(e)))
@@ -47,6 +49,7 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
         try {
             await api.saveSettings({
                 openOnStartup,
+                autoRun,
                 openaiToken: openaiToken.trim(),
             });
             setSaved(true);
@@ -93,6 +96,26 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
                                     Show the main window when Dogger launches.
                                     When off, Dogger starts hidden in the menu
                                     bar.
+                                </span>
+                            </span>
+                        </label>
+
+                        <label className="setting-toggle">
+                            <input
+                                type="checkbox"
+                                checked={autoRun}
+                                onChange={(e) => {
+                                    setAutoRun(e.target.checked);
+                                    setSaved(false);
+                                }}
+                            />
+                            <span>
+                                <span className="setting-toggle-title">
+                                    Auto-run
+                                </span>
+                                <span className="setting-toggle-hint">
+                                    Run a task automatically when you open it
+                                    from the menu bar.
                                 </span>
                             </span>
                         </label>

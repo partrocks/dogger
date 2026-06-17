@@ -80,6 +80,11 @@ pub struct Settings {
     /// Defaults to `true` so a fresh install behaves like a normal app.
     #[serde(default = "default_open_on_startup")]
     pub open_on_startup: bool,
+    /// Automatically run a task when its runner window is opened from the tray.
+    /// When `false`, the runner window opens idle and waits for the Run button
+    /// (the original behaviour). Defaults to `false`.
+    #[serde(default)]
+    pub auto_run: bool,
     /// OpenAI API token. Stored verbatim in `config.json`.
     #[serde(default)]
     pub openai_token: String,
@@ -93,6 +98,7 @@ impl Default for Settings {
     fn default() -> Self {
         Settings {
             open_on_startup: default_open_on_startup(),
+            auto_run: false,
             openai_token: String::new(),
         }
     }
