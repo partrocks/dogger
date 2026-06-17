@@ -130,8 +130,8 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
                                 </button>
                             </div>
                             <span className="field-hint">
-                                Used by the task Generate tab. Create a secret
-                                key (it starts with <code>sk-</code>) at{" "}
+                                Create a secret key (it starts with{" "}
+                                <code>sk-</code>) at{" "}
                                 <button
                                     type="button"
                                     className="link-button"
@@ -143,9 +143,7 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
                                 >
                                     platform.openai.com/api-keys
                                 </button>
-                                , then paste it here. Your key is stored locally
-                                in <code>~/.dogger/config.json</code> and is only
-                                sent to OpenAI.
+                                , then paste it here.
                             </span>
                         </label>
                     </div>
