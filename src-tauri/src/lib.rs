@@ -4,6 +4,7 @@
 
 mod docker;
 mod storage;
+mod tray;
 
 use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
@@ -12,6 +13,7 @@ use tauri::{LogicalPosition, LogicalSize, Manager, WebviewWindow, Window, Window
 
 use docker::{DockerStatus, RunningContainer, ShellInfo};
 use storage::{Project, RunRecord, Task, WindowState};
+use tray::TrayProject;
 
 #[tauri::command]
 fn list_projects() -> Result<Vec<Project>, String> {
@@ -134,6 +136,13 @@ fn run_task(
     docker::run_task(app, &project_id, &task_id, &container, &run_id)
 }
 
+/// Refresh the tray's "online projects" submenu. Called by the frontend (the
+/// single Docker poller) whenever the set of online projects/tasks changes.
+#[tauri::command]
+fn set_tray_menu(app: tauri::AppHandle, projects: Vec<TrayProject>) -> Result<(), String> {
+    tray::update(&app, projects)
+}
+
 /// Apply the last persisted window geometry to the main window on startup.
 /// Best-effort: a missing/corrupt config just leaves the `tauri.conf.json`
 /// defaults in place.
@@ -184,14 +193,25 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 restore_window_state(&window);
             }
+            tray::init(app.handle())?;
             Ok(())
         })
         .on_window_event(|window, event| match event {
             WindowEvent::Moved(_) | WindowEvent::Resized(_) => {
-                persist_window_state(window, false);
+                if window.label() == "main" {
+                    persist_window_state(window, false);
+                }
             }
-            WindowEvent::CloseRequested { .. } => {
-                persist_window_state(window, true);
+            // The main window lives behind the tray icon: closing it hides it
+            // (so "Show / Hide Dogger" can bring it back) rather than quitting.
+            // Use the tray's "Quit Dogger" to actually exit. Runner windows
+            // close normally.
+            WindowEvent::CloseRequested { api, .. } => {
+                if window.label() == "main" {
+                    persist_window_state(window, true);
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
             }
             _ => {}
         })
@@ -212,6 +232,7 @@ pub fn run() {
             detect_container_shell,
             list_runs,
             run_task,
+            set_tray_menu,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

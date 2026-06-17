@@ -5,7 +5,7 @@ import {
     PlusIcon,
 } from "@heroicons/react/24/outline";
 import type { DockerStatus, Project, RunningContainer } from "./types";
-import { getProjectStatus } from "./types";
+import { getProjectStatus, isProjectContainerRunning } from "./types";
 import * as api from "./api";
 import { Titlebar } from "./components/Titlebar";
 import { DockerWarning } from "./components/DockerWarning";
@@ -117,6 +117,20 @@ function App() {
         }, 5000);
         return () => clearInterval(handle);
     }, [docker?.daemonRunning]);
+
+    // Keep the macOS tray menu's "online projects" list in sync. The frontend
+    // owns the single Docker poll, so it pushes the derived online set to the
+    // tray whenever projects or live container state change.
+    useEffect(() => {
+        const online = projects
+            .filter((p) => isProjectContainerRunning(p, running))
+            .map((p) => ({
+                id: p.id,
+                name: p.name,
+                tasks: p.tasks.map((t) => ({ id: t.id, name: t.name })),
+            }));
+        api.setTrayMenu(online).catch(() => {});
+    }, [projects, running]);
 
     const selected = projects.find((p) => p.id === selectedId) ?? null;
     const dockerUnavailable = docker != null && !docker.daemonRunning;

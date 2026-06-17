@@ -79,6 +79,16 @@ Update this after each meaningful step.
       persists them on move/resize/close (`restore_window_state` /
       `persist_window_state` in `lib.rs`).
 
+## Menu bar (tray) app — done
+- [x] macOS tray icon with a context menu: About · online projects (each a
+      submenu of its tasks) · Show/Hide · Quit (`src-tauri/src/tray.rs`).
+- [x] Online project list pushed from the frontend's single Docker poll via the
+      `set_tray_menu` command (`App.tsx` → `api.setTrayMenu`).
+- [x] Clicking a task opens a small frameless runner window (`?view=runner`;
+      `RunnerWindow`) with a Run button, streamed output, and Close.
+- [x] Main window hides on close (tray Show/Hide brings it back); Quit exits.
+      Runner windows covered by a `runner-*` capability.
+
 ## Phase 3 (AI — not started)
 - [ ] Generate/edit tasks from natural language.
 - [ ] Summarise run output and suggest fixes.

@@ -555,8 +555,7 @@ pub fn run_task(
     // rewritten resource references above and lets hand-written scripts use
     // `"$DOGGER_TASK_DIR/foo.php"` directly.
     let task_dir_env = format!("DOGGER_TASK_DIR={dest}");
-    let command =
-        format!("docker exec{wd_display} -e {task_dir_env} {container} sh -c '{runner}'");
+    let command = format!("docker exec{wd_display} -e {task_dir_env} {container} sh -c '{runner}'");
 
     let mut record = RunRecord {
         id: run_id.to_string(),
@@ -837,10 +836,8 @@ mod tests {
 
     #[test]
     fn longer_name_wins() {
-        let out = rewrite_resource_refs(
-            "cat ./seed.php.bak\n",
-            &res(&["seed.php", "seed.php.bak"]),
-        );
+        let out =
+            rewrite_resource_refs("cat ./seed.php.bak\n", &res(&["seed.php", "seed.php.bak"]));
         assert_eq!(out, "cat \"$DOGGER_TASK_DIR/seed.php.bak\"\n");
     }
 

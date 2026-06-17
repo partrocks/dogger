@@ -187,3 +187,27 @@ export function onRunFinished(
     handler(e.payload),
   );
 }
+
+// ---- Tray menu -------------------------------------------------------------
+
+/** A task as surfaced in the tray menu (subset of {@link Task}). */
+export interface TrayTask {
+  id: string;
+  name: string;
+}
+
+/** An online project (its container is running) plus its tasks, for the tray. */
+export interface TrayProject {
+  id: string;
+  name: string;
+  tasks: TrayTask[];
+}
+
+/**
+ * Push the current set of online projects (and their tasks) to the macOS tray
+ * menu. The frontend owns the single Docker poll, so it drives the menu rather
+ * than the backend polling `docker ps` a second time.
+ */
+export function setTrayMenu(projects: TrayProject[]): Promise<void> {
+  return invoke("set_tray_menu", { projects });
+}

@@ -230,6 +230,38 @@ host temp file and `docker cp`-ed over the (already copied) `main.sh` inside the
 container, so only the throwaway in-container copy differs. The user therefore
 writes plain `php ./seed.php` and it "just works".
 
+## 2026-06-17 — macOS menu bar (tray) icon with a task runner
+Dogger now installs a system tray (menu bar) icon alongside the full window app
+(it does not replace it). Its context menu is: **About Dogger** · separator ·
+one submenu per **online** project listing that project's tasks · separator ·
+**Show / Hide Dogger** · **Quit Dogger** (`src-tauri/src/tray.rs`).
+
+- **Online project list is frontend-driven.** The frontend already owns the
+  single `docker ps` poll, so rather than poll a second time from Rust it pushes
+  the derived set of online projects (and their tasks) to the tray via a
+  `set_tray_menu` command whenever `projects`/`running` change (`App.tsx`
+  effect → `api.setTrayMenu`). Rust rebuilds the native menu on the main thread
+  (`tray::update` via `run_on_main_thread`, required on macOS) and applies it
+  with `tray.set_menu`. Menu item ids encode the action: `run::<project>::<task>`,
+  `toggle`, `quit`; About uses a `PredefinedMenuItem::about`.
+- **Clicking a task opens a small runner window.** A `WebviewWindowBuilder`
+  window (label `runner-<project>-<task>`, frameless, ~560×480) loads the same
+  bundle with `?view=runner&project=&task=`; `main.tsx` branches on that to
+  render `RunnerWindow` instead of `App`. The runner has a Run button (manual,
+  repeatable), streams output via the existing `dogger://run-*` events, shows the
+  exit status, and has a Close button. A `runner-*` capability
+  (`capabilities/runner.json`) grants those windows event + window-close perms.
+- **Closing the main window hides it** (so "Show / Hide Dogger" can bring it
+  back) instead of quitting; only "Quit Dogger" (`app.exit(0)`) truly exits.
+  Geometry is still persisted on close. The dock icon is kept (Dogger is a full
+  app too), so no `ActivationPolicy::Accessory` change.
+- **Tray icon** is a monochrome **template** image — the Dogger mark in solid
+  black on transparency (`src-tauri/icons/tray-template.png`, generated from the
+  `DoggerMark` paths) — embedded via `tauri::include_image!` and set with
+  `icon_as_template(true)` so macOS tints it to match the light/dark menu bar
+  like the neighbouring status icons (rather than showing the full colored app
+  icon). Requires the `tray-icon` + `image-png` Cargo features on `tauri`.
+
 ## Open questions
 - (resolved) **Output streaming:** stream `main.sh` stdout/stderr live into the
   UI — done via Tauri events in Phase 2 (see above).

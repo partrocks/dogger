@@ -1192,6 +1192,59 @@ code {
   color: #c0392b;
 }
 
+/* ---- Tray runner window ---- */
+.runner-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.runner-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.runner-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.runner-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.runner-project {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.runner-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.runner-foot-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 /* ---- Run history ---- */
 .runs-section {
   margin-top: 28px;
