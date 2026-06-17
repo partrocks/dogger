@@ -369,15 +369,17 @@ fn list_tasks(project_id: &str) -> Result<Vec<Task>> {
             continue;
         }
         let id = entry.file_name().to_string_lossy().to_string();
-        let meta_path = entry.path().join("task.json");
-        let meta: TaskFile = if meta_path.exists() {
-            read_json(&meta_path)?
-        } else {
-            TaskFile {
-                name: id.clone(),
-                description: None,
-            }
-        };
+        // Skip hidden folders (e.g. a user-created `.git` repo) and any folder
+        // that isn't a real task: a task must carry both `main.sh` and
+        // `task.json` in its root.
+        if id.starts_with('.') {
+            continue;
+        }
+        let task_path = entry.path();
+        if !task_path.join("main.sh").exists() || !task_path.join("task.json").exists() {
+            continue;
+        }
+        let meta: TaskFile = read_json(&task_path.join("task.json"))?;
         tasks.push(Task {
             id: id.clone(),
             name: meta.name,
