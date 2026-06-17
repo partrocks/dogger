@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/solid";
 import type { RunningContainer } from "../types";
 import * as api from "../api";
 
@@ -136,9 +137,18 @@ export function ContainerField({
                 {container.trim() && workingDir.trim() && check !== "idle" && (
                     <span className={"path-check path-check--" + check}>
                         {check === "checking" && "Checking path…"}
-                        {check === "ok" && "✓ Path exists in the container"}
-                        {check === "missing" &&
-                            "✗ Path not found in the container"}
+                        {check === "ok" && (
+                            <>
+                                <CheckCircleIcon className="ic-sm" />
+                                Path exists in the container
+                            </>
+                        )}
+                        {check === "missing" && (
+                            <>
+                                <XCircleIcon className="ic-sm" />
+                                Path not found in the container
+                            </>
+                        )}
                         {check === "error" &&
                             (checkMsg ?? "Couldn't verify path")}
                     </span>

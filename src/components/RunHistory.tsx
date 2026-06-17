@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import type { RunRecord } from "../types";
 import { RunStatusBadge } from "./RunStatusBadge";
 import { OutputView } from "./OutputView";
@@ -40,7 +41,11 @@ function RunHistoryItem({ run }: { run: RunRecord }) {
                 <span className="run-item-when">{when}</span>
                 <code className="run-item-target">{run.container}</code>
                 <span className="run-item-dur muted">{duration}</span>
-                <span className="run-item-chevron">{open ? "▾" : "▸"}</span>
+                {open ? (
+                    <ChevronDownIcon className="run-item-chevron ic-sm" />
+                ) : (
+                    <ChevronRightIcon className="run-item-chevron ic-sm" />
+                )}
             </button>
             {open && (
                 <div className="run-item-body">

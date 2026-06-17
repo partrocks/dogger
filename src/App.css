@@ -1396,3 +1396,37 @@ code {
     max-width: none;
   }
 }
+
+/* ---- Icons (Heroicons) ---- */
+.ic {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.ic-sm {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.ic-lg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Buttons that pair an icon with a label (or hold a lone icon) align their
+   contents on a single row so the glyph sits centred next to the text. */
+.icon-button,
+.icon-button--light,
+.sidebar-toggle,
+.primary-button,
+.run-button,
+.ghost-button,
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}

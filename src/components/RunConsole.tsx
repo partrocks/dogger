@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import type { OutputLine, RunStatus } from "../types";
 import * as api from "../api";
 import { RunStatusBadge } from "./RunStatusBadge";
@@ -100,8 +101,9 @@ export function RunConsole({
                         onClick={onClose}
                         disabled={!finished}
                         title={finished ? "Close" : "Run in progress…"}
+                        aria-label="Close"
                     >
-                        ×
+                        <XMarkIcon className="ic-lg" />
                     </button>
                 </div>
                 {error && <div className="banner banner--error">{error}</div>}

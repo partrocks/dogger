@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { ArrowLeftIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { PlayIcon } from "@heroicons/react/24/solid";
 import Editor from "react-simple-code-editor";
 import type { Project, RunRecord, ShellInfo, Task } from "../types";
 import * as api from "../api";
@@ -154,7 +156,8 @@ export function TaskDetail({
         <div className="project-view">
             <div className="breadcrumb">
                 <button className="link-button" onClick={onClose}>
-                    ← {project.name}
+                    <ArrowLeftIcon className="ic-sm" />
+                    {project.name}
                 </button>
                 <span className="muted"> / Tasks / {task.name}</span>
             </div>
@@ -193,7 +196,8 @@ export function TaskDetail({
                         }
                         onClick={startRun}
                     >
-                        ▶ Run
+                        <PlayIcon className="ic" />
+                        Run
                     </button>
                     <button
                         className="ghost-button ghost-button--danger"
@@ -214,9 +218,10 @@ export function TaskDetail({
                         <button
                             className="icon-button icon-button--light"
                             title="New file"
+                            aria-label="New file"
                             onClick={() => setAddFileOpen(true)}
                         >
-                            +
+                            <PlusIcon className="ic-lg" />
                         </button>
                     </div>
                     {files.length === 0 ? (

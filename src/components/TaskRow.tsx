@@ -1,3 +1,4 @@
+import { PlayIcon } from "@heroicons/react/24/solid";
 import type { Task } from "../types";
 
 export function TaskRow({
@@ -40,7 +41,8 @@ export function TaskRow({
                     title={title}
                     onClick={() => onRun(container)}
                 >
-                    ▶ Run
+                    <PlayIcon className="ic" />
+                    Run
                 </button>
             </div>
         </li>

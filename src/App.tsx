@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+    ChevronDoubleLeftIcon,
+    ChevronDoubleRightIcon,
+    PlusIcon,
+} from "@heroicons/react/24/outline";
 import type { DockerStatus, Project, RunningContainer } from "./types";
 import { getProjectStatus } from "./types";
 import * as api from "./api";
@@ -166,7 +171,11 @@ function App() {
                             aria-expanded={!sidebarCollapsed}
                             onClick={() => setSidebarCollapsed((c) => !c)}
                         >
-                            {sidebarCollapsed ? "»" : "«"}
+                            {sidebarCollapsed ? (
+                                <ChevronDoubleRightIcon className="ic" />
+                            ) : (
+                                <ChevronDoubleLeftIcon className="ic" />
+                            )}
                         </button>
                     </div>
 
@@ -178,7 +187,7 @@ function App() {
                             aria-label="New project"
                             onClick={() => setNewProjectOpen(true)}
                         >
-                            +
+                            <PlusIcon className="ic" />
                         </button>
                     </div>
 

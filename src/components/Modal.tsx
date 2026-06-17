@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import type { ReactNode } from "react";
 
 export function Modal({
@@ -31,8 +32,9 @@ export function Modal({
                     <button
                         className="icon-button icon-button--light"
                         onClick={onClose}
+                        aria-label="Close"
                     >
-                        ×
+                        <XMarkIcon className="ic-lg" />
                     </button>
                 </div>
                 <div className="modal-body">{children}</div>
