@@ -418,6 +418,11 @@ code {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px 14px;
+  transition: background-color 0.12s ease;
+}
+
+.task-row:hover {
+  background: var(--chip-bg);
 }
 
 .task-info {
