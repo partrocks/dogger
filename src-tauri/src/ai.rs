@@ -234,12 +234,23 @@ The task you are building is named: "__TASK_NAME__".
 2. `main.sh` is the REQUIRED entrypoint. It must begin with:
        #!/usr/bin/env bash
        set -euo pipefail
-3. Keep the task focused and idempotent where reasonable. Prefer a single `main.sh`; add extra task files only when it genuinely helps, and source/reference them via "$DOGGER_TASK_DIR/<file>".
+3. Keep the task focused and idempotent where reasonable.
 4. Inspect the codebase first when the request depends on how the project is built or run, rather than guessing.
 
+## File layout
+- You are NOT limited to a single `main.sh`. Prefer a clean, modular layout over one monolithic script.
+- Keep `main.sh` as a thin entrypoint that orchestrates the work, and split distinct steps, reusable logic, configuration, or large here-docs into their own helper files (e.g. `lib.sh`, `setup.sh`, a config file, a Python/Node script).
+- Reference sibling files through `$DOGGER_TASK_DIR`, e.g. `source "$DOGGER_TASK_DIR/lib.sh"` or `python3 "$DOGGER_TASK_DIR/report.py"`. Never use a relative or absolute host path.
+- Use judgment: a tiny task can still be a single `main.sh`. Split things out when it genuinely improves readability or reuse, not for its own sake.
+
+## Existing task files
+- If this task already has files, their current contents are provided to you as context before the conversation.
+- Treat them as the starting point: modify or extend the existing files only as needed to satisfy the request, and leave unrelated parts intact. Don't rewrite a file wholesale when a targeted change will do, and don't recreate files that are already correct.
+- `write_task_file` overwrites a file in full, so when changing an existing file, re-send its complete intended contents (the original plus your edits).
+
 ## Workflow
-- Explore with `list_dir`/`read_file` as needed.
-- Write the task with `write_task_file` (always including `main.sh`). Use `list_task_files`/`read_task_file` to review what already exists before overwriting.
+- Explore with `list_dir`/`read_file` as needed. The existing task files (if any) are already given to you; use `list_task_files`/`read_task_file` only to re-check the latest state after your own writes.
+- Write the task with `write_task_file` (the final task must always include `main.sh`).
 - When everything is written, reply with a short, plain-language summary of what the task does and how to run it. Do not paste the full file contents back."#;
 
 /// Fill the [`SYSTEM_PROMPT`] placeholders for a specific project/task.
@@ -262,6 +273,36 @@ fn build_system_prompt(
         .replace("__TASK_NAME__", task_name)
         .replace("__CODEBASE_PATH__", &codebase)
         .replace("__CONTAINER_WORKING_DIR__", &working_dir)
+}
+
+/// Snapshot the task directory's current files into a single context block, so
+/// the model can build on an existing task instead of regenerating it blind.
+/// Returns `None` when the task has no files yet (a fresh generation). Each file
+/// is truncated to [`MAX_FILE_BYTES`] to keep the prompt bounded.
+fn build_existing_files_context(project_id: &str, task_id: &str) -> Option<String> {
+    let files = storage::list_task_files(project_id, task_id).ok()?;
+    if files.is_empty() {
+        return None;
+    }
+    let mut out = String::from(
+        "The task directory already contains the following files. Use them as the \
+         starting point and change only what the request requires.\n",
+    );
+    for file in &files {
+        let body = match storage::read_task_file(project_id, task_id, file) {
+            Ok(mut contents) => {
+                if contents.len() as u64 > MAX_FILE_BYTES {
+                    contents.truncate(MAX_FILE_BYTES as usize);
+                    contents.push_str(&format!("\n… (truncated at {MAX_FILE_BYTES} bytes)"));
+                }
+                contents
+            }
+            // A file we can't read (e.g. binary/non-UTF-8) is still worth noting.
+            Err(e) => format!("(could not read this file as text: {e})"),
+        };
+        out.push_str(&format!("\n----- {file} -----\n{body}\n"));
+    }
+    Some(out)
 }
 
 // ---- Tool schemas -----------------------------------------------------------
@@ -694,6 +735,7 @@ pub fn generate_task(
         &project.container_working_dir,
         &task_name,
     );
+    let existing_files = build_existing_files_context(project_id, task_id);
 
     let app_thread = app.clone();
     let project_id = project_id.to_string();
@@ -714,6 +756,7 @@ pub fn generate_task(
             &token,
             &model_wire,
             &system_prompt,
+            existing_files.as_deref(),
             &codebase_path,
             &project_id,
             &task_id,
@@ -762,6 +805,7 @@ fn run_agent_loop(
     token: &str,
     model: &str,
     system_prompt: &str,
+    existing_files: Option<&str>,
     codebase_path: &str,
     project_id: &str,
     task_id: &str,
@@ -771,8 +815,13 @@ fn run_agent_loop(
 ) -> Result<LoopEnd, String> {
     let tools = tool_specs();
 
-    let mut messages: Vec<Value> = Vec::with_capacity(history.len() + 2);
+    let mut messages: Vec<Value> = Vec::with_capacity(history.len() + 3);
     messages.push(json!({ "role": "system", "content": system_prompt }));
+    // Seed the conversation with the task's current files so the model edits an
+    // existing task rather than regenerating it from scratch.
+    if let Some(existing) = existing_files {
+        messages.push(json!({ "role": "system", "content": existing }));
+    }
     for turn in history {
         // Coerce anything unexpected to a user turn rather than rejecting it.
         let role = if turn.role == "assistant" {
