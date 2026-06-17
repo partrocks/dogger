@@ -1,7 +1,7 @@
 # Dogger — developer Makefile
 # `make dev` is the canonical way to start the app locally.
 
-.PHONY: dev build check clean install
+.PHONY: dev build check clean install clear-icon-cache
 
 # Run the Tauri app locally (starts Vite + the desktop window).
 dev:
@@ -25,3 +25,11 @@ clean:
 # Convenience: install JS dependencies.
 install:
 	npm install
+
+# Force macOS to drop cached app icons, then restart Dock + Finder.
+# Run this after changing src-tauri/icons and rebuilding to see the new icon.
+clear-icon-cache:
+	sudo rm -rf /Library/Caches/com.apple.iconservices.store
+	sudo find /private/var/folders -name com.apple.dock.iconcache -delete 2>/dev/null || true
+	killall Dock
+	killall Finder
