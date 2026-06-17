@@ -60,6 +60,16 @@ fn create_task(
 }
 
 #[tauri::command]
+fn update_task(
+    project_id: String,
+    task_id: String,
+    name: String,
+    description: Option<String>,
+) -> Result<Task, String> {
+    storage::update_task(&project_id, &task_id, &name, description.as_deref())
+}
+
+#[tauri::command]
 fn delete_task(project_id: String, task_id: String) -> Result<(), String> {
     storage::delete_task(&project_id, &task_id)
 }
@@ -191,6 +201,7 @@ pub fn run() {
             update_project,
             delete_project,
             create_task,
+            update_task,
             delete_task,
             list_task_files,
             read_task_file,

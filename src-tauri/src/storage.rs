@@ -451,6 +451,38 @@ pub fn create_task(project_id: &str, name: &str, description: Option<&str>) -> R
     })
 }
 
+/// Persist edits to a task's metadata (`task.json`). The task's directory id is
+/// left unchanged so its files and run history stay put; only the displayed
+/// name and description are updated.
+pub fn update_task(
+    project_id: &str,
+    task_id: &str,
+    name: &str,
+    description: Option<&str>,
+) -> Result<Task> {
+    if name.trim().is_empty() {
+        return Err("task name is required".to_string());
+    }
+    let dir = task_dir(project_id, task_id)?;
+    if !dir.exists() {
+        return Err(format!("task not found: {task_id}"));
+    }
+    let meta = TaskFile {
+        name: name.trim().to_string(),
+        description: description
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string),
+    };
+    write_json(&dir.join("task.json"), &meta)?;
+    Ok(Task {
+        id: task_id.to_string(),
+        name: meta.name,
+        dir: task_id.to_string(),
+        description: meta.description,
+    })
+}
+
 pub fn delete_task(project_id: &str, task_id: &str) -> Result<()> {
     let dir = task_dir(project_id, task_id)?;
     if dir.exists() {

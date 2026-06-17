@@ -64,6 +64,20 @@ export function createTask(input: {
   });
 }
 
+export function updateTask(input: {
+  projectId: string;
+  taskId: string;
+  name: string;
+  description?: string;
+}): Promise<Task> {
+  return invoke("update_task", {
+    projectId: input.projectId,
+    taskId: input.taskId,
+    name: input.name,
+    description: input.description ?? null,
+  });
+}
+
 export function deleteTask(projectId: string, taskId: string): Promise<void> {
   return invoke("delete_task", { projectId, taskId });
 }

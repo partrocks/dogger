@@ -16,6 +16,7 @@ export function TaskDetail({
     containerRunning,
     dockerReady,
     onClose,
+    onChanged,
     onDeleted,
 }: {
     project: Project;
@@ -23,6 +24,7 @@ export function TaskDetail({
     containerRunning: boolean;
     dockerReady: boolean;
     onClose: () => void;
+    onChanged: () => void;
     onDeleted: () => void;
 }) {
     const [files, setFiles] = useState<string[]>([]);
@@ -31,6 +33,15 @@ export function TaskDetail({
     const [dirty, setDirty] = useState(false);
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState<string | null>(null);
+
+    // Task metadata (`task.json`) is edited through this form rather than as a
+    // raw file in the list. Seeded from the task and kept in sync as it changes.
+    const [name, setName] = useState(task.name);
+    const [description, setDescription] = useState(task.description ?? "");
+    const [detailsBusy, setDetailsBusy] = useState(false);
+    const detailsDirty =
+        name.trim() !== task.name ||
+        description.trim() !== (task.description ?? "");
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [addFileOpen, setAddFileOpen] = useState(false);
     const [runs, setRuns] = useState<RunRecord[]>([]);
@@ -80,10 +91,14 @@ export function TaskDetail({
         });
     }
 
+    // `task.json` is task metadata, edited via the details form above the
+    // editor — never surfaced as a raw, editable file in the list.
     const loadFiles = useCallback(
         async (preferFile?: string) => {
             try {
-                const list = await api.listTaskFiles(project.id, task.id);
+                const list = (
+                    await api.listTaskFiles(project.id, task.id)
+                ).filter((f) => f !== "task.json");
                 setFiles(list);
                 setActiveFile((current) => {
                     const wanted = preferFile ?? current;
@@ -133,6 +148,34 @@ export function TaskDetail({
             setErr(String(e));
         } finally {
             setBusy(false);
+        }
+    }
+
+    useEffect(() => {
+        setName(task.name);
+        setDescription(task.description ?? "");
+    }, [task.id, task.name, task.description]);
+
+    async function saveDetails() {
+        const trimmed = name.trim();
+        if (!trimmed) {
+            setErr("Task name is required.");
+            return;
+        }
+        setDetailsBusy(true);
+        setErr(null);
+        try {
+            await api.updateTask({
+                projectId: project.id,
+                taskId: task.id,
+                name: trimmed,
+                description: description.trim() || undefined,
+            });
+            onChanged();
+        } catch (e) {
+            setErr(String(e));
+        } finally {
+            setDetailsBusy(false);
         }
     }
 
@@ -210,6 +253,43 @@ export function TaskDetail({
             </div>
             {task.description && <p className="muted">{task.description}</p>}
             {err && <div className="banner banner--error">{err}</div>}
+
+            <section className="task-details">
+                <div className="task-details-head">
+                    <span>Details</span>
+                    <button
+                        className="primary-button"
+                        onClick={saveDetails}
+                        disabled={detailsBusy || !detailsDirty || !name.trim()}
+                    >
+                        {detailsBusy
+                            ? "Saving…"
+                            : detailsDirty
+                              ? "Save"
+                              : "Saved"}
+                    </button>
+                </div>
+                <div className="task-details-fields">
+                    <label className="field">
+                        <span className="field-label">Title</span>
+                        <input
+                            value={name}
+                            placeholder="Task name"
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                    </label>
+                    <label className="field">
+                        <span className="field-label">Description</span>
+                        <textarea
+                            className="task-details-description"
+                            value={description}
+                            placeholder="What does this task do?"
+                            rows={3}
+                            onChange={(e) => setDescription(e.target.value)}
+                        />
+                    </label>
+                </div>
+            </section>
 
             <div className="file-editor">
                 <div className="file-list">

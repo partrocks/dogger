@@ -67,6 +67,7 @@ export function ProjectView({
                 containerRunning={containerRunning}
                 dockerReady={dockerReady}
                 onClose={() => setOpenTaskId(null)}
+                onChanged={() => onChanged(project.id)}
                 onDeleted={() => {
                     setOpenTaskId(null);
                     onChanged(project.id);
