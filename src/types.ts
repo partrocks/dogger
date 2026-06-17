@@ -50,6 +50,19 @@ export function getProjectStatus(
   return matchesRunning(project.container, running) ? "online" : "offline";
 }
 
+/**
+ * Whether a project's single configured container is currently running. When
+ * Docker is unavailable (`running === null`) we can't confirm it, so treat it
+ * as not running.
+ */
+export function isProjectContainerRunning(
+  project: Project,
+  running: RunningContainer[] | null,
+): boolean {
+  if (!project.container || !running) return false;
+  return matchesRunning(project.container, running);
+}
+
 /** Result of probing the local Docker CLI/daemon (Phase 2). */
 export interface DockerStatus {
   cliInstalled: boolean;
