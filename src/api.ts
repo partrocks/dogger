@@ -335,6 +335,40 @@ export function setTrayMenu(projects: TrayProject[]): Promise<void> {
   return invoke("set_tray_menu", { projects });
 }
 
+// ---- Menu bar popover panel (?view=tray) -----------------------------------
+// These mirror the native tray menu's actions, reusing the same Rust handlers
+// so the rich popover and the right-click menu behave identically.
+
+/** Show or hide the main window ("Show / Hide Dogger"). */
+export function trayShowHide(): Promise<void> {
+  return invoke("tray_show_hide");
+}
+
+/** Bring the main window forward on the Settings screen. */
+export function trayOpenSettings(): Promise<void> {
+  return invoke("tray_open_settings");
+}
+
+/** Bring the main window forward on the About screen. */
+export function trayOpenAbout(): Promise<void> {
+  return invoke("tray_open_about");
+}
+
+/** Open (or focus) the runner window for a task, as the native menu does. */
+export function trayRunTask(projectId: string, taskId: string): Promise<void> {
+  return invoke("tray_run_task", { projectId, taskId });
+}
+
+/** Quit Dogger entirely. */
+export function trayQuit(): Promise<void> {
+  return invoke("tray_quit");
+}
+
+/** Dismiss the popover panel (called after a panel action). */
+export function trayHidePanel(): Promise<void> {
+  return invoke("tray_hide_panel");
+}
+
 // ---- Settings --------------------------------------------------------------
 
 /** User-editable settings, persisted in `~/.dogger/config.json`. */

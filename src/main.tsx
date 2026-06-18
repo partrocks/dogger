@@ -2,19 +2,23 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { RunnerWindow } from "./components/RunnerWindow";
+import { TrayPanel } from "./components/TrayPanel";
 import "./App.css";
 
-// The runner windows opened from the tray load this same bundle with
-// `?view=runner&project=<id>&task=<id>`, so we branch on the query params and
-// render the dedicated single-task runner instead of the full app.
+// Auxiliary windows load this same bundle with a `?view=` query param, so we
+// branch here and render the dedicated UI instead of the full app:
+//   ?view=runner&project=<id>&task=<id>  — single-task runner window
+//   ?view=tray                           — menu bar popover panel
 const params = new URLSearchParams(window.location.search);
-const isRunner = params.get("view") === "runner";
+const view = params.get("view");
 const projectId = params.get("project") ?? "";
 const taskId = params.get("task") ?? "";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    {isRunner ? (
+    {view === "tray" ? (
+      <TrayPanel />
+    ) : view === "runner" ? (
       <RunnerWindow projectId={projectId} taskId={taskId} />
     ) : (
       <App />

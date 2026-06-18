@@ -22,11 +22,15 @@
 //! single Docker poller.
 
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 use tauri::menu::{Menu, MenuBuilder, MenuItem, SubmenuBuilder};
-use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
+use tauri::{
+    AppHandle, Emitter, Manager, Monitor, PhysicalPosition, Rect, Runtime, WebviewUrl,
+    WebviewWindow, WebviewWindowBuilder,
+};
 
 /// Event emitted to the main window when "Settings…" is chosen from the tray,
 /// telling the frontend to navigate to the Settings screen.
@@ -39,6 +43,14 @@ pub const OPEN_ABOUT_EVENT: &str = "dogger://open-about";
 /// Stable id of the single tray icon, used to look it up for menu updates.
 const TRAY_ID: &str = "dogger-tray";
 
+/// Window label of the rich menu bar popover panel shown on left-click. The
+/// native [`Menu`] is kept as a right-click fallback.
+const PANEL_LABEL: &str = "tray";
+
+/// Logical size of the popover panel.
+const PANEL_WIDTH: f64 = 320.0;
+const PANEL_HEIGHT: f64 = 460.0;
+
 /// Menu item id prefix for "run this task" entries: `run::<project>::<task>`.
 const RUN_PREFIX: &str = "run::";
 
@@ -48,6 +60,15 @@ const RETAINED_MENU_LIMIT: usize = 16;
 /// Per-app tray menu state, kept in Tauri's managed state.
 struct TrayMenuState<R: Runtime> {
     inner: Mutex<TrayMenuInner<R>>,
+}
+
+/// Tracks when the popover was last hidden so a click on the tray icon that
+/// *dismisses* an open panel isn't immediately treated as a request to reopen
+/// it. Clicking the icon while the panel is key first makes the panel resign
+/// key (blur → hide); the click event arrives just after, and without this we'd
+/// reopen the panel the user was trying to close.
+struct TrayPanelState {
+    last_hidden: Mutex<Instant>,
 }
 
 struct TrayMenuInner<R: Runtime> {
@@ -170,9 +191,12 @@ pub fn init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let icon = tauri::include_image!("icons/tray-template.png");
     TrayIconBuilder::with_id(TRAY_ID)
         .tooltip("Dogger")
+        // Left-click opens the rich popover panel (handled in `on_tray_icon_event`);
+        // the native menu is reserved for right-click as a fallback.
         .menu(&menu)
-        .show_menu_on_left_click(true)
+        .show_menu_on_left_click(false)
         .on_menu_event(on_menu_event)
+        .on_tray_icon_event(on_tray_icon_event)
         .icon(icon)
         .icon_as_template(true)
         .build(app)?;
@@ -182,7 +206,150 @@ pub fn init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
             retained: vec![menu],
         }),
     });
+    app.manage(TrayPanelState {
+        last_hidden: Mutex::new(Instant::now() - Duration::from_secs(1)),
+    });
+    // Build the popover up front (hidden) so the first left-click shows it
+    // instantly rather than waiting for the webview to load.
+    if let Err(e) = build_panel(app) {
+        eprintln!("dogger: failed to pre-build tray panel: {e}");
+    }
     Ok(())
+}
+
+/// Build the (initially hidden) popover panel window. It loads the same bundle
+/// as the main app with `?view=tray`, so React renders the dedicated panel UI.
+fn build_panel<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
+    WebviewWindowBuilder::new(
+        app,
+        PANEL_LABEL,
+        WebviewUrl::App("index.html?view=tray".into()),
+    )
+    .title("Dogger")
+    .inner_size(PANEL_WIDTH, PANEL_HEIGHT)
+    .resizable(false)
+    .decorations(false)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .visible(false)
+    .build()
+}
+
+/// Handle raw tray icon events. A left-click toggles the popover; right-clicks
+/// fall through to the native menu (configured via `show_menu_on_left_click`).
+fn on_tray_icon_event<R: Runtime>(tray: &TrayIcon<R>, event: TrayIconEvent) {
+    if let TrayIconEvent::Click {
+        button: MouseButton::Left,
+        button_state: MouseButtonState::Up,
+        rect,
+        ..
+    } = event
+    {
+        toggle_panel(tray.app_handle(), rect);
+    }
+}
+
+/// Show the popover anchored under the tray icon, or hide it if already open.
+fn toggle_panel<R: Runtime>(app: &AppHandle<R>, rect: Rect) {
+    let win = match app.get_webview_window(PANEL_LABEL) {
+        Some(w) => w,
+        None => match build_panel(app) {
+            Ok(w) => w,
+            Err(e) => {
+                eprintln!("dogger: failed to build tray panel: {e}");
+                return;
+            }
+        },
+    };
+
+    if win.is_visible().unwrap_or(false) {
+        let _ = win.hide();
+        return;
+    }
+    // The click that dismisses an open panel first blurs (and hides) it; don't
+    // reopen it in that case. See `TrayPanelState`.
+    if panel_recently_hidden(app) {
+        return;
+    }
+
+    position_panel(&win, rect);
+    let _ = win.show();
+    let _ = win.set_focus();
+}
+
+/// Position the popover horizontally centred under the tray icon, just below the
+/// menu bar, clamped to the monitor that holds the icon.
+fn position_panel<R: Runtime>(win: &WebviewWindow<R>, rect: Rect) {
+    let scale = win.scale_factor().unwrap_or(1.0);
+    let icon_pos = rect.position.to_physical::<f64>(scale);
+    let icon_size = rect.size.to_physical::<f64>(scale);
+    let panel_w = win
+        .outer_size()
+        .map(|s| s.width as f64)
+        .unwrap_or(PANEL_WIDTH * scale);
+
+    let center_x = icon_pos.x + icon_size.width / 2.0;
+    let below = icon_pos.y + icon_size.height + 6.0 * scale;
+    let mut x = center_x - panel_w / 2.0;
+
+    if let Some(mon) = monitor_for_point(win, center_x, below) {
+        let mp = mon.position();
+        let ms = mon.size();
+        let margin = 8.0 * scale;
+        let min_x = mp.x as f64 + margin;
+        let max_x = mp.x as f64 + ms.width as f64 - panel_w - margin;
+        if max_x >= min_x {
+            x = x.clamp(min_x, max_x);
+        }
+    }
+
+    let _ = win.set_position(PhysicalPosition::new(x.round() as i32, below.round() as i32));
+}
+
+/// Find the monitor whose bounds contain the given physical point, falling back
+/// to the primary monitor.
+fn monitor_for_point<R: Runtime>(win: &WebviewWindow<R>, x: f64, y: f64) -> Option<Monitor> {
+    let monitors = win.available_monitors().ok()?;
+    monitors
+        .iter()
+        .find(|m| {
+            let p = m.position();
+            let s = m.size();
+            let px = p.x as f64;
+            let py = p.y as f64;
+            x >= px && x < px + s.width as f64 && y >= py && y < py + s.height as f64
+        })
+        .cloned()
+        .or_else(|| win.primary_monitor().ok().flatten())
+}
+
+/// Record that the popover was just hidden (called from the blur handler).
+pub(crate) fn note_panel_hidden<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(state) = app.try_state::<TrayPanelState>() {
+        if let Ok(mut t) = state.last_hidden.lock() {
+            *t = Instant::now();
+        }
+    }
+}
+
+/// Whether the popover was hidden within the debounce window.
+fn panel_recently_hidden<R: Runtime>(app: &AppHandle<R>) -> bool {
+    app.try_state::<TrayPanelState>()
+        .and_then(|s| {
+            s.last_hidden
+                .lock()
+                .ok()
+                .map(|t| t.elapsed() < Duration::from_millis(250))
+        })
+        .unwrap_or(false)
+}
+
+/// Hide the popover panel. Called by the frontend after a panel action so it
+/// dismisses promptly (the blur-hide also covers this, but this avoids a race).
+pub(crate) fn hide_panel<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(win) = app.get_webview_window(PANEL_LABEL) {
+        let _ = win.hide();
+    }
 }
 
 /// Rebuild and apply the tray menu for the current set of online projects.
@@ -253,7 +420,7 @@ fn on_menu_event<R: Runtime>(app: &AppHandle<R>, event: tauri::menu::MenuEvent) 
 
 /// Show the main window if hidden, hide it if visible — backing the menu's
 /// "Show / Hide Dogger" entry.
-fn toggle_main_window<R: Runtime>(app: &AppHandle<R>) {
+pub(crate) fn toggle_main_window<R: Runtime>(app: &AppHandle<R>) {
     let Some(window) = app.get_webview_window("main") else {
         return;
     };
@@ -268,7 +435,7 @@ fn toggle_main_window<R: Runtime>(app: &AppHandle<R>) {
 /// Bring the main window forward and ask the frontend to switch to the Settings
 /// screen. The window may be hidden (closing it only hides it), so show + focus
 /// first, then emit the navigation event the React app listens for.
-fn open_settings<R: Runtime>(app: &AppHandle<R>) {
+pub(crate) fn open_settings<R: Runtime>(app: &AppHandle<R>) {
     let Some(window) = app.get_webview_window("main") else {
         return;
     };
@@ -280,7 +447,7 @@ fn open_settings<R: Runtime>(app: &AppHandle<R>) {
 /// Bring the main window forward and ask the frontend to switch to the About
 /// screen. Mirrors [`open_settings`]: show + focus first (the window may be
 /// hidden), then emit the navigation event the React app listens for.
-fn open_about<R: Runtime>(app: &AppHandle<R>) {
+pub(crate) fn open_about<R: Runtime>(app: &AppHandle<R>) {
     let Some(window) = app.get_webview_window("main") else {
         return;
     };
@@ -292,7 +459,7 @@ fn open_about<R: Runtime>(app: &AppHandle<R>) {
 /// Open (or focus, if already open) a small runner window for a single task.
 /// The window loads the same frontend bundle with `?view=runner` query params
 /// so React renders the dedicated runner UI instead of the full app.
-fn open_runner_window<R: Runtime>(
+pub(crate) fn open_runner_window<R: Runtime>(
     app: &AppHandle<R>,
     project_id: &str,
     task_id: &str,

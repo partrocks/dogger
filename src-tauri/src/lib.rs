@@ -183,6 +183,46 @@ fn set_tray_menu(app: tauri::AppHandle, projects: Vec<TrayProject>) -> Result<()
     tray::update(&app, projects)
 }
 
+// ---- Menu bar popover actions ----------------------------------------------
+// These back the rich popover panel (`?view=tray`), reusing the exact same
+// handlers as the native tray menu so both stay behaviourally identical.
+
+/// Show/hide the main window (the popover's "Show / Hide Dogger" action).
+#[tauri::command]
+fn tray_show_hide(app: tauri::AppHandle) {
+    tray::toggle_main_window(&app);
+}
+
+/// Bring the main window forward on the Settings screen.
+#[tauri::command]
+fn tray_open_settings(app: tauri::AppHandle) {
+    tray::open_settings(&app);
+}
+
+/// Bring the main window forward on the About screen.
+#[tauri::command]
+fn tray_open_about(app: tauri::AppHandle) {
+    tray::open_about(&app);
+}
+
+/// Open (or focus) the runner window for a task, matching the native menu.
+#[tauri::command]
+fn tray_run_task(app: tauri::AppHandle, project_id: String, task_id: String) -> Result<(), String> {
+    tray::open_runner_window(&app, &project_id, &task_id).map_err(|e| e.to_string())
+}
+
+/// Quit Dogger entirely.
+#[tauri::command]
+fn tray_quit(app: tauri::AppHandle) {
+    app.exit(0);
+}
+
+/// Dismiss the popover panel (called after a panel action).
+#[tauri::command]
+fn tray_hide_panel(app: tauri::AppHandle) {
+    tray::hide_panel(&app);
+}
+
 /// Read the persisted user settings for the Settings screen.
 #[tauri::command]
 fn get_settings() -> Result<Settings, String> {
@@ -277,6 +317,15 @@ pub fn run() {
                     let _ = window.hide();
                 }
             }
+            // The menu bar popover dismisses itself when it loses focus (click
+            // elsewhere, or a re-click on the tray icon). Note the time so a
+            // dismissing icon click doesn't immediately reopen it.
+            WindowEvent::Focused(false) => {
+                if window.label() == "tray" {
+                    tray::note_panel_hidden(window.app_handle());
+                    let _ = window.hide();
+                }
+            }
             _ => {}
         })
         .invoke_handler(tauri::generate_handler![
@@ -300,6 +349,12 @@ pub fn run() {
             cancel_generation,
             transcribe_audio,
             set_tray_menu,
+            tray_show_hide,
+            tray_open_settings,
+            tray_open_about,
+            tray_run_task,
+            tray_quit,
+            tray_hide_panel,
             get_settings,
             save_settings,
         ])
