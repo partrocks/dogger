@@ -126,6 +126,18 @@ export function RunnerWindow({
         if (el) el.scrollTop = el.scrollHeight;
     }, [lines]);
 
+    // Esc closes the runner window.
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                e.preventDefault();
+                getCurrentWindow().close();
+            }
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, []);
+
     const run = useCallback(() => {
         if (!project || !task || !container) return;
         const runId = newRunId();
@@ -222,21 +234,32 @@ export function RunnerWindow({
                                     : "Run error"}
                     </span>
                     <div className="runner-foot-actions">
-                        <button
-                            className="ghost-button"
-                            onClick={() => getCurrentWindow().close()}
-                        >
-                            Close
-                        </button>
-                        <button
-                            className="primary-button"
-                            disabled={!canRun}
-                            title={runHint}
-                            onClick={run}
-                        >
-                            <PlayIcon className="ic" />
-                            {finished ? "Run again" : "Run"}
-                        </button>
+                        {finished ? (
+                            <button
+                                className="primary-button"
+                                onClick={() => getCurrentWindow().close()}
+                            >
+                                Close
+                            </button>
+                        ) : (
+                            <>
+                                <button
+                                    className="ghost-button"
+                                    onClick={() => getCurrentWindow().close()}
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    className="primary-button"
+                                    disabled={!canRun}
+                                    title={runHint}
+                                    onClick={run}
+                                >
+                                    <PlayIcon className="ic" />
+                                    Run
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

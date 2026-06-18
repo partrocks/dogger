@@ -96,8 +96,7 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
                                     Launch on startup
                                 </span>
                                 <span className="setting-toggle-hint">
-                                    Open Dogger automatically when you log in by
-                                    adding it as a macOS login item.
+                                    Open Dogger automatically on startup.
                                 </span>
                             </span>
                         </label>
@@ -116,9 +115,7 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
                                     Launch app in background
                                 </span>
                                 <span className="setting-toggle-hint">
-                                    Start Dogger hidden in the menu bar. When on,
-                                    only the menu bar icon appears at launch; turn
-                                    it off to show the dashboard on startup.
+                                    Start Dogger hidden in the menu bar.
                                 </span>
                             </span>
                         </label>
@@ -134,7 +131,7 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
                             />
                             <span>
                                 <span className="setting-toggle-title">
-                                    Auto-run
+                                    Auto-run tasks from menu bar
                                 </span>
                                 <span className="setting-toggle-hint">
                                     Run a task automatically when you open it
