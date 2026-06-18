@@ -245,6 +245,13 @@ fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String
 /// transient failure to toggle the login item doesn't fail the save.
 fn apply_launch_on_startup<R: tauri::Runtime>(app: &tauri::AppHandle<R>, enabled: bool) {
     let manager = app.autolaunch();
+    // Re-registering the login item makes macOS re-fire the "App Background
+    // Activity" notification, so only touch it when the OS state actually
+    // differs from what the user wants. This keeps the notification to the
+    // expected one-off (first enable / external change) instead of every launch.
+    if manager.is_enabled().unwrap_or(false) == enabled {
+        return;
+    }
     let result = if enabled {
         manager.enable()
     } else {
