@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PlayIcon } from "@heroicons/react/24/solid";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { OutputLine, Project, RunStatus, Task } from "../types";
 import { matchesRunning } from "../types";
@@ -252,11 +253,15 @@ export function RunnerWindow({
                                 <button
                                     className="primary-button"
                                     disabled={!canRun}
-                                    title={runHint}
+                                    title={running ? "Task is running…" : runHint}
                                     onClick={run}
                                 >
-                                    <PlayIcon className="ic" />
-                                    Run
+                                    {running ? (
+                                        <ArrowPathIcon className="ic chat-mic-spin" />
+                                    ) : (
+                                        <PlayIcon className="ic" />
+                                    )}
+                                    {running ? "Running…" : "Run"}
                                 </button>
                             </>
                         )}
