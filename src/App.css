@@ -743,6 +743,37 @@ code {
   min-width: 0;
 }
 
+.token-field {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.token-field .path-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.token-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.token-check--ok {
+  color: #1f9b3a;
+}
+
+.token-check--error {
+  color: #c0392b;
+}
+
+.token-check--warn {
+  color: #b7791f;
+}
+
 .primary-button--danger {
   border-color: #c0392b;
   background: #c0392b;

@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import {
     ArrowLeftIcon,
+    CheckCircleIcon,
+    ExclamationTriangleIcon,
     EyeIcon,
     EyeSlashIcon,
+    XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import * as api from "../api";
+import type { TokenCheck } from "../api";
 
 // Where users create the API key that goes in the field below.
 const OPENAI_KEYS_URL = "https://platform.openai.com/api-keys";
@@ -27,6 +31,11 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
     const [err, setErr] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
 
+    // Result of the most recent token check (the "Test" button or a save).
+    // Cleared whenever the token field changes, since it'd otherwise be stale.
+    const [testing, setTesting] = useState(false);
+    const [tokenCheck, setTokenCheck] = useState<TokenCheck | null>(null);
+
     useEffect(() => {
         let alive = true;
         api.getSettings()
@@ -44,16 +53,59 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
         };
     }, []);
 
+    // Verify the token on demand (the "Test" button). Reflects the outcome
+    // inline without saving, so users can confirm a key before committing it.
+    async function testToken() {
+        const token = openaiToken.trim();
+        if (!token || testing) return;
+        setTesting(true);
+        setErr(null);
+        setTokenCheck(null);
+        try {
+            setTokenCheck(await api.validateOpenaiToken(token));
+        } catch (e) {
+            setTokenCheck({ valid: false, reachable: false, message: String(e) });
+        } finally {
+            setTesting(false);
+        }
+    }
+
     async function save() {
         setBusy(true);
         setErr(null);
         setSaved(false);
+
+        const token = openaiToken.trim();
+        // Soft validation: only block the save when OpenAI *definitively*
+        // rejects the key. A network failure (reachable: false) is inconclusive,
+        // so we let the save through rather than trapping the user offline.
+        if (token) {
+            try {
+                const check = await api.validateOpenaiToken(token);
+                setTokenCheck(check);
+                if (check.reachable && !check.valid) {
+                    setErr(
+                        check.message ??
+                            "This OpenAI token was rejected. Check the key and try again.",
+                    );
+                    setBusy(false);
+                    return;
+                }
+            } catch {
+                // Treat an unexpected failure to even run the check as
+                // inconclusive and proceed, mirroring the "unreachable" case.
+                setTokenCheck(null);
+            }
+        } else {
+            setTokenCheck(null);
+        }
+
         try {
             await api.saveSettings({
                 launchOnStartup,
                 launchInBackground,
                 autoRun,
-                openaiToken: openaiToken.trim(),
+                openaiToken: token,
             });
             setSaved(true);
         } catch (e) {
@@ -142,36 +194,77 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
 
                         <label className="field">
                             <span className="field-label">OpenAI token</span>
-                            <div className="path-input">
-                                <input
-                                    type={showToken ? "text" : "password"}
-                                    value={openaiToken}
-                                    placeholder="sk-…"
-                                    autoComplete="off"
-                                    spellCheck={false}
-                                    onChange={(e) => {
-                                        setOpenaiToken(e.target.value);
-                                        setSaved(false);
-                                    }}
-                                />
+                            <div className="token-field">
+                                <div className="path-input">
+                                    <input
+                                        type={showToken ? "text" : "password"}
+                                        value={openaiToken}
+                                        placeholder="sk-…"
+                                        autoComplete="off"
+                                        spellCheck={false}
+                                        onChange={(e) => {
+                                            setOpenaiToken(e.target.value);
+                                            setSaved(false);
+                                            setTokenCheck(null);
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="icon-button--light"
+                                        onClick={() => setShowToken((v) => !v)}
+                                        aria-label={
+                                            showToken
+                                                ? "Hide token"
+                                                : "Show token"
+                                        }
+                                        title={
+                                            showToken
+                                                ? "Hide token"
+                                                : "Show token"
+                                        }
+                                    >
+                                        {showToken ? (
+                                            <EyeSlashIcon className="ic" />
+                                        ) : (
+                                            <EyeIcon className="ic" />
+                                        )}
+                                    </button>
+                                </div>
                                 <button
                                     type="button"
-                                    className="icon-button--light"
-                                    onClick={() => setShowToken((v) => !v)}
-                                    aria-label={
-                                        showToken ? "Hide token" : "Show token"
-                                    }
-                                    title={
-                                        showToken ? "Hide token" : "Show token"
+                                    className="ghost-button"
+                                    onClick={testToken}
+                                    disabled={
+                                        testing || busy || !openaiToken.trim()
                                     }
                                 >
-                                    {showToken ? (
-                                        <EyeSlashIcon className="ic" />
-                                    ) : (
-                                        <EyeIcon className="ic" />
-                                    )}
+                                    {testing ? "Testing…" : "Test"}
                                 </button>
                             </div>
+                            {tokenCheck && (
+                                <span
+                                    className={
+                                        "token-check " +
+                                        (tokenCheck.valid
+                                            ? "token-check--ok"
+                                            : tokenCheck.reachable
+                                              ? "token-check--error"
+                                              : "token-check--warn")
+                                    }
+                                >
+                                    {tokenCheck.valid ? (
+                                        <CheckCircleIcon className="ic-sm" />
+                                    ) : tokenCheck.reachable ? (
+                                        <XCircleIcon className="ic-sm" />
+                                    ) : (
+                                        <ExclamationTriangleIcon className="ic-sm" />
+                                    )}
+                                    {tokenCheck.valid
+                                        ? "This token works."
+                                        : (tokenCheck.message ??
+                                          "Couldn't verify this token.")}
+                                </span>
+                            )}
                             <span className="field-hint">
                                 Create a secret key (it starts with{" "}
                                 <code>sk-</code>) at{" "}

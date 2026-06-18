@@ -403,6 +403,28 @@ export function saveSettings(settings: Settings): Promise<void> {
   return invoke("save_settings", { settings });
 }
 
+/** Result of checking an OpenAI token against the provider. */
+export interface TokenCheck {
+  /** The token authenticated successfully. */
+  valid: boolean;
+  /**
+   * We reached OpenAI and got a definitive answer. When `false`, the check was
+   * inconclusive (e.g. a network failure), so `valid` should be ignored and the
+   * caller should stay lenient rather than treating the token as rejected.
+   */
+  reachable: boolean;
+  /** Human-readable detail for the non-valid cases. */
+  message: string | null;
+}
+
+/**
+ * Check whether an OpenAI token works via a cheap, side-effect-free request.
+ * Never rejects: transport failures come back as `reachable: false`.
+ */
+export function validateOpenaiToken(token: string): Promise<TokenCheck> {
+  return invoke("validate_openai_token", { token });
+}
+
 /**
  * Subscribe to the tray's "Settings…" action, which asks the app to navigate to
  * the Settings screen after bringing the main window forward.

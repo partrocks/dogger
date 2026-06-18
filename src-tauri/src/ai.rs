@@ -57,6 +57,15 @@ impl Provider {
         }
     }
 
+    /// URL of the provider's models-listing endpoint. It's cheap (no tokens
+    /// consumed) and side-effect free, so Settings uses it to check a token
+    /// actually works before relying on it.
+    pub fn models_url(self) -> &'static str {
+        match self {
+            Provider::OpenAi => "https://api.openai.com/v1/models",
+        }
+    }
+
     /// Stable string id used when (de)serialising a [`Model`] reference across
     /// the Tauri boundary. Mirrors the `camelCase` serde tag above.
     pub fn id(self) -> &'static str {
@@ -798,6 +807,100 @@ pub fn transcribe_audio(audio_base64: &str, mime_type: &str) -> Result<String, S
         .json()
         .map_err(|e| format!("could not parse the transcription response: {e}"))?;
     Ok(body["text"].as_str().unwrap_or_default().trim().to_string())
+}
+
+/// Outcome of checking an OpenAI token against the provider. The split between
+/// `valid` and `reachable` lets the UI block a save only when the key is
+/// *definitively* rejected, while still allowing a save (with a warning) when we
+/// simply couldn't reach OpenAI to find out.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenCheck {
+    /// The token authenticated successfully.
+    pub valid: bool,
+    /// We managed to reach OpenAI and get a definitive answer. `false` means a
+    /// network/transport failure, so `valid` is meaningless and the caller
+    /// should treat the result as "unknown" rather than "rejected".
+    pub reachable: bool,
+    /// Human-readable detail for the non-valid cases, suitable for display.
+    pub message: Option<String>,
+}
+
+/// Check whether `token` is a working OpenAI key by listing models — a cheap,
+/// side-effect-free request that consumes no tokens. Never returns `Err`: a
+/// failure to reach OpenAI is reported as `reachable: false` so the caller can
+/// decide how lenient to be, rather than being conflated with a bad key.
+pub fn validate_openai_token(token: &str) -> TokenCheck {
+    let token = token.trim();
+    if token.is_empty() {
+        return TokenCheck {
+            valid: false,
+            reachable: true,
+            message: Some("No token provided.".to_string()),
+        };
+    }
+
+    let client = match reqwest::blocking::Client::builder()
+        .connect_timeout(CONNECT_TIMEOUT)
+        .timeout(REQUEST_TIMEOUT)
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            return TokenCheck {
+                valid: false,
+                reachable: false,
+                message: Some(format!("Could not create HTTP client: {e}")),
+            };
+        }
+    };
+
+    let resp = match client
+        .get(Provider::OpenAi.models_url())
+        .header("Authorization", format!("Bearer {token}"))
+        .send()
+    {
+        Ok(r) => r,
+        Err(_) => {
+            return TokenCheck {
+                valid: false,
+                reachable: false,
+                message: Some(
+                    "Couldn't reach OpenAI to verify the token. Check your internet connection."
+                        .to_string(),
+                ),
+            };
+        }
+    };
+
+    let status = resp.status();
+    if status.is_success() {
+        return TokenCheck {
+            valid: true,
+            reachable: true,
+            message: None,
+        };
+    }
+
+    if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+        return TokenCheck {
+            valid: false,
+            reachable: true,
+            message: Some(
+                "This token was rejected by OpenAI (it may be invalid, expired, or revoked)."
+                    .to_string(),
+            ),
+        };
+    }
+
+    // Reached OpenAI but got an unexpected status (e.g. a 429 or a transient
+    // 5xx). We can't confirm the key, so report it as "not reachable for a
+    // definitive answer" and let the caller stay lenient.
+    TokenCheck {
+        valid: false,
+        reachable: false,
+        message: Some(format!("Unexpected response from OpenAI ({status}).")),
+    }
 }
 
 // ---- Agent loop -------------------------------------------------------------

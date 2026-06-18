@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ArrowLeftIcon,
     PlusIcon,
@@ -147,25 +147,46 @@ export function TaskDetail({
         loadFiles("main.sh");
     }, [loadFiles]);
 
+    const loadContents = useCallback(
+        (file: string | null) => {
+            if (!file) {
+                setContents("");
+                setDirty(false);
+                return () => {};
+            }
+            let cancelled = false;
+            api.readTaskFile(project.id, task.id, file)
+                .then((text) => {
+                    if (!cancelled) {
+                        setContents(text);
+                        setDirty(false);
+                    }
+                })
+                .catch((e) => !cancelled && setErr(String(e)));
+            return () => {
+                cancelled = true;
+            };
+        },
+        [project.id, task.id],
+    );
+
+    useEffect(() => loadContents(activeFile), [activeFile, loadContents]);
+
+    // The Generate tab can have the agent rewrite task files (or add/remove
+    // them) while it's open. Re-reading only happens when `activeFile` changes,
+    // so switching back to Build with the same file selected would otherwise
+    // show stale content. Refresh the list and active file whenever the Build
+    // tab becomes active. Using a ref to detect the transition avoids a
+    // duplicate load on mount (where the tab already starts as "build").
+    const prevTabRef = useRef(activeTab);
     useEffect(() => {
-        if (!activeFile) {
-            setContents("");
-            setDirty(false);
-            return;
-        }
-        let cancelled = false;
-        api.readTaskFile(project.id, task.id, activeFile)
-            .then((text) => {
-                if (!cancelled) {
-                    setContents(text);
-                    setDirty(false);
-                }
-            })
-            .catch((e) => !cancelled && setErr(String(e)));
-        return () => {
-            cancelled = true;
-        };
-    }, [activeFile, project.id, task.id]);
+        const enteredBuild =
+            activeTab === "build" && prevTabRef.current !== "build";
+        prevTabRef.current = activeTab;
+        if (!enteredBuild) return;
+        loadFiles();
+        return loadContents(activeFile);
+    }, [activeTab, loadFiles, loadContents, activeFile]);
 
     async function save() {
         if (!activeFile) return;

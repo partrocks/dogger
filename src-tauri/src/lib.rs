@@ -177,6 +177,13 @@ fn transcribe_audio(audio_base64: String, mime_type: String) -> Result<String, S
     ai::transcribe_audio(&audio_base64, &mime_type)
 }
 
+/// Check whether an OpenAI token works, so Settings can verify a key before
+/// relying on it. See `ai::validate_openai_token` for the lenient/strict split.
+#[tauri::command]
+fn validate_openai_token(token: String) -> ai::TokenCheck {
+    ai::validate_openai_token(&token)
+}
+
 /// Refresh the tray's "online projects" submenu. Called by the frontend (the
 /// single Docker poller) whenever the set of online projects/tasks changes.
 #[tauri::command]
@@ -378,6 +385,7 @@ pub fn run() {
             generate_task,
             cancel_generation,
             transcribe_audio,
+            validate_openai_token,
             set_tray_menu,
             tray_show_hide,
             tray_open_settings,
