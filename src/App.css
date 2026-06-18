@@ -1188,6 +1188,21 @@ code {
   color: var(--text);
 }
 
+.task-tab-wrap {
+  display: inline-flex;
+}
+
+/* When disabled, swallow the button's pointer events so hover (and the
+   tooltip) resolves on the wrapper, and show a not-allowed cursor there. */
+.task-tab-wrap:has(.task-tab:disabled) {
+  cursor: not-allowed;
+}
+
+.task-tab:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .task-tab.is-active {
   color: var(--accent);
   border-bottom-color: var(--accent);

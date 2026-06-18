@@ -33,6 +33,11 @@ export function TaskDetail({
     onDeleted: () => void;
 }) {
     const [activeTab, setActiveTab] = useState<"build" | "generate">("build");
+    // Whether an OpenAI token is configured. The Generate tab needs it, so the
+    // tab is disabled (with an explanatory tooltip) until one is set. Resolved
+    // once on mount; `null` while loading, which we treat as "allowed" so the
+    // tab isn't flagged as unavailable before we actually know.
+    const [hasToken, setHasToken] = useState<boolean | null>(null);
     const [files, setFiles] = useState<string[]>([]);
     const [activeFile, setActiveFile] = useState<string | null>(null);
     const [contents, setContents] = useState("");
@@ -63,6 +68,9 @@ export function TaskDetail({
     const canRun = dockerReady && !!container && containerRunning;
     const effectiveTarget = canRun ? container : "";
 
+    // The Generate tab requires an OpenAI token; disable it until one is set.
+    const generateDisabled = hasToken === false;
+
     const loadRuns = useCallback(() => {
         api.listRuns(project.id, task.id)
             .then(setRuns)
@@ -72,6 +80,22 @@ export function TaskDetail({
     useEffect(() => {
         loadRuns();
     }, [loadRuns]);
+
+    useEffect(() => {
+        let cancelled = false;
+        api.getSettings()
+            .then((s) => !cancelled && setHasToken(!!s.openaiToken.trim()))
+            .catch(() => !cancelled && setHasToken(null));
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    // If the token check resolves to missing while the Generate tab is active
+    // (e.g. it was opened before the check finished), fall back to Build.
+    useEffect(() => {
+        if (generateDisabled && activeTab === "generate") setActiveTab("build");
+    }, [generateDisabled, activeTab]);
 
     // Probe the target container so we can show which shell will actually run
     // `main.sh` (honouring its shebang) instead of leaving the user guessing.
@@ -310,18 +334,32 @@ export function TaskDetail({
                     >
                         Build
                     </button>
-                    <button
-                        role="tab"
-                        aria-selected={activeTab === "generate"}
-                        className={
-                            "task-tab" +
-                            (activeTab === "generate" ? " is-active" : "")
+                    {/* Wrapper carries the tooltip: a disabled <button> doesn't
+                        emit the hover events a native `title` needs, so we let
+                        pointer events fall through to this span instead. */}
+                    <span
+                        className="task-tab-wrap"
+                        title={
+                            generateDisabled
+                                ? "Add your OpenAI token in Settings to generate tasks"
+                                : undefined
                         }
-                        onClick={() => setActiveTab("generate")}
                     >
-                        <SparklesIcon className="ic-sm" />
-                        Generate
-                    </button>
+                        <button
+                            role="tab"
+                            aria-selected={activeTab === "generate"}
+                            aria-disabled={generateDisabled}
+                            className={
+                                "task-tab" +
+                                (activeTab === "generate" ? " is-active" : "")
+                            }
+                            disabled={generateDisabled}
+                            onClick={() => setActiveTab("generate")}
+                        >
+                            <SparklesIcon className="ic-sm" />
+                            Generate
+                        </button>
+                    </span>
                 </div>
 
                 {activeTab === "build" ? (
