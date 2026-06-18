@@ -16,7 +16,8 @@ const OPENAI_KEYS_URL = "https://platform.openai.com/api-keys";
 // shared `~/.dogger/config.json` via the Rust `get_settings`/`save_settings`
 // commands.
 export function SettingsView({ onClose }: { onClose: () => void }) {
-    const [openOnStartup, setOpenOnStartup] = useState(false);
+    const [launchOnStartup, setLaunchOnStartup] = useState(false);
+    const [launchInBackground, setLaunchInBackground] = useState(true);
     const [autoRun, setAutoRun] = useState(false);
     const [openaiToken, setOpenaiToken] = useState("");
     const [showToken, setShowToken] = useState(false);
@@ -31,7 +32,8 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
         api.getSettings()
             .then((s) => {
                 if (!alive) return;
-                setOpenOnStartup(s.openOnStartup);
+                setLaunchOnStartup(s.launchOnStartup);
+                setLaunchInBackground(s.launchInBackground);
                 setAutoRun(s.autoRun);
                 setOpenaiToken(s.openaiToken);
             })
@@ -48,7 +50,8 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
         setSaved(false);
         try {
             await api.saveSettings({
-                openOnStartup,
+                launchOnStartup,
+                launchInBackground,
                 autoRun,
                 openaiToken: openaiToken.trim(),
             });
@@ -82,20 +85,40 @@ export function SettingsView({ onClose }: { onClose: () => void }) {
                         <label className="setting-toggle">
                             <input
                                 type="checkbox"
-                                checked={openOnStartup}
+                                checked={launchOnStartup}
                                 onChange={(e) => {
-                                    setOpenOnStartup(e.target.checked);
+                                    setLaunchOnStartup(e.target.checked);
                                     setSaved(false);
                                 }}
                             />
                             <span>
                                 <span className="setting-toggle-title">
-                                    Open on startup
+                                    Launch on startup
                                 </span>
                                 <span className="setting-toggle-hint">
-                                    Show the main window when Dogger launches.
-                                    When off, Dogger starts hidden in the menu
-                                    bar.
+                                    Open Dogger automatically when you log in by
+                                    adding it as a macOS login item.
+                                </span>
+                            </span>
+                        </label>
+
+                        <label className="setting-toggle">
+                            <input
+                                type="checkbox"
+                                checked={launchInBackground}
+                                onChange={(e) => {
+                                    setLaunchInBackground(e.target.checked);
+                                    setSaved(false);
+                                }}
+                            />
+                            <span>
+                                <span className="setting-toggle-title">
+                                    Launch app in background
+                                </span>
+                                <span className="setting-toggle-hint">
+                                    Start Dogger hidden in the menu bar. When on,
+                                    only the menu bar icon appears at launch; turn
+                                    it off to show the dashboard on startup.
                                 </span>
                             </span>
                         </label>

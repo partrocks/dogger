@@ -11,6 +11,7 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use tauri::{LogicalPosition, LogicalSize, Manager, WebviewWindow, Window, WindowEvent};
+use tauri_plugin_autostart::ManagerExt;
 
 use docker::{DockerStatus, RunningContainer, ShellInfo};
 use storage::{Project, RunRecord, Settings, Task, WindowState};
@@ -187,7 +188,7 @@ fn set_tray_menu(app: tauri::AppHandle, projects: Vec<TrayProject>) -> Result<()
 // These back the rich popover panel (`?view=tray`), reusing the exact same
 // handlers as the native tray menu so both stay behaviourally identical.
 
-/// Show/hide the main window (the popover's "Show / Hide Dogger" action).
+/// Show/hide the main window (the popover's "Show / Hide Dashboard" action).
 #[tauri::command]
 fn tray_show_hide(app: tauri::AppHandle) {
     tray::toggle_main_window(&app);
@@ -229,12 +230,29 @@ fn get_settings() -> Result<Settings, String> {
     storage::load_settings()
 }
 
-/// Persist user settings. The "open on startup" preference only takes effect on
-/// the next launch (it decides whether the main window is shown or stays hidden
-/// in the tray), so there is nothing to reconcile live here.
+/// Persist user settings. The "launch in the background" preference only takes
+/// effect on the next launch (it decides whether the dashboard is shown or
+/// stays hidden in the tray), but "launch on startup" is applied live here by
+/// registering/unregistering Dogger as a macOS login item.
 #[tauri::command]
-fn save_settings(settings: Settings) -> Result<(), String> {
+fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
+    apply_launch_on_startup(&app, settings.launch_on_startup);
     storage::save_settings(settings)
+}
+
+/// Reconcile the OS login item with the desired "launch on startup" state.
+/// Best-effort: the setting is still the source of truth in `config.json`, so a
+/// transient failure to toggle the login item doesn't fail the save.
+fn apply_launch_on_startup<R: tauri::Runtime>(app: &tauri::AppHandle<R>, enabled: bool) {
+    let manager = app.autolaunch();
+    let result = if enabled {
+        manager.enable()
+    } else {
+        manager.disable()
+    };
+    if let Err(e) = result {
+        eprintln!("dogger: failed to update launch-on-startup login item: {e}");
+    }
 }
 
 /// Apply the last persisted window geometry to the main window on startup.
@@ -283,16 +301,21 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .setup(|app| {
+            let settings = storage::load_settings().unwrap_or_default();
+            // Keep the OS login item in sync with the persisted preference in
+            // case it was changed outside Dogger (e.g. System Settings).
+            apply_launch_on_startup(app.handle(), settings.launch_on_startup);
             // The main window is configured `visible: false` so we can decide
             // here whether to reveal it or leave Dogger running quietly in the
-            // tray, based on the user's "open on startup" preference.
-            let open_on_startup = storage::load_settings()
-                .map(|s| s.open_on_startup)
-                .unwrap_or(true);
+            // tray, based on the user's "launch in the background" preference.
             if let Some(window) = app.get_webview_window("main") {
                 restore_window_state(&window);
-                if open_on_startup {
+                if !settings.launch_in_background {
                     let _ = window.show();
                     let _ = window.set_focus();
                 }
@@ -307,7 +330,7 @@ pub fn run() {
                 }
             }
             // The main window lives behind the tray icon: closing it hides it
-            // (so "Show / Hide Dogger" can bring it back) rather than quitting.
+            // (so "Show / Hide Dashboard" can bring it back) rather than quitting.
             // Use the tray's "Quit Dogger" to actually exit. Runner windows
             // close normally.
             WindowEvent::CloseRequested { api, .. } => {

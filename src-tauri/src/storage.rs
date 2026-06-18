@@ -75,11 +75,17 @@ pub struct AppConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
-    /// Show the main window when Dogger launches. When `false`, Dogger starts
-    /// hidden in the menu-bar tray (reachable via "Show / Hide Dogger").
-    /// Defaults to `true` so a fresh install behaves like a normal app.
-    #[serde(default = "default_open_on_startup")]
-    pub open_on_startup: bool,
+    /// Register Dogger as a macOS login item so it launches automatically when
+    /// the user logs in. Defaults to `false`; toggling it on/off updates the
+    /// system login item via the autostart plugin.
+    #[serde(default)]
+    pub launch_on_startup: bool,
+    /// Start Dogger hidden in the menu-bar tray. When `true`, launching Dogger
+    /// leaves the main window hidden (reachable via "Show / Hide Dashboard");
+    /// when `false`, the main window is shown on launch. Defaults to `true` so
+    /// Dogger lives quietly in the menu bar out of the box.
+    #[serde(default = "default_launch_in_background")]
+    pub launch_in_background: bool,
     /// Automatically run a task when its runner window is opened from the tray.
     /// When `false`, the runner window opens idle and waits for the Run button
     /// (the original behaviour). Defaults to `false`.
@@ -90,14 +96,15 @@ pub struct Settings {
     pub openai_token: String,
 }
 
-fn default_open_on_startup() -> bool {
+fn default_launch_in_background() -> bool {
     true
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Settings {
-            open_on_startup: default_open_on_startup(),
+            launch_on_startup: false,
+            launch_in_background: default_launch_in_background(),
             auto_run: false,
             openai_token: String::new(),
         }

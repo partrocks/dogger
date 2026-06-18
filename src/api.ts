@@ -339,7 +339,7 @@ export function setTrayMenu(projects: TrayProject[]): Promise<void> {
 // These mirror the native tray menu's actions, reusing the same Rust handlers
 // so the rich popover and the right-click menu behave identically.
 
-/** Show or hide the main window ("Show / Hide Dogger"). */
+/** Show or hide the main window ("Show / Hide Dashboard"). */
 export function trayShowHide(): Promise<void> {
   return invoke("tray_show_hide");
 }
@@ -374,10 +374,16 @@ export function trayHidePanel(): Promise<void> {
 /** User-editable settings, persisted in `~/.dogger/config.json`. */
 export interface Settings {
   /**
-   * Show the main window on launch. When `false`, Dogger starts hidden in the
-   * tray. Takes effect on the next launch.
+   * Register Dogger as a macOS login item so it starts automatically when you
+   * log in. Applied immediately when saved.
    */
-  openOnStartup: boolean;
+  launchOnStartup: boolean;
+  /**
+   * Start Dogger hidden in the menu bar. When `true`, the main window
+   * (dashboard) stays hidden on launch (just the tray icon); when `false`, the
+   * dashboard is shown. Takes effect on the next launch.
+   */
+  launchInBackground: boolean;
   /**
    * Automatically run a task when its runner window is opened from the tray.
    * When `false`, the runner window opens idle and waits for the Run button.

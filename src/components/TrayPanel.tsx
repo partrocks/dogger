@@ -5,7 +5,7 @@ import {
     InformationCircleIcon,
     PlayIcon,
     PowerIcon,
-    WindowIcon,
+    Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Project, RunningContainer } from "../types";
@@ -178,10 +178,10 @@ export function TrayPanel() {
             <footer className="tray-foot">
                 <button
                     className="tray-action"
-                    title="Show / Hide Dogger"
+                    title="Show / Hide Dashboard"
                     onClick={() => act(api.trayShowHide)}
                 >
-                    <WindowIcon className="ic" />
+                    <Squares2X2Icon className="ic" />
                 </button>
                 <button
                     className="tray-action"

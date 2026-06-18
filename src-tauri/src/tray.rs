@@ -10,7 +10,7 @@
 //! <Online project>        ▸  <task>  (opens a small runner window)
 //!                            <task>
 //! ─────────────
-//! Show / Hide Dogger
+//! Show / Hide Dashboard
 //! Settings…                  (opens the full app on the Settings screen)
 //! Quit Dogger
 //! ```
@@ -168,7 +168,7 @@ fn build_menu<R: Runtime>(
     }
 
     let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
-    let toggle = MenuItem::with_id(app, "toggle", "Show / Hide Dogger", true, None::<&str>)?;
+    let toggle = MenuItem::with_id(app, "toggle", "Show / Hide Dashboard", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Dogger", true, None::<&str>)?;
 
     menu.separator()
@@ -419,7 +419,7 @@ fn on_menu_event<R: Runtime>(app: &AppHandle<R>, event: tauri::menu::MenuEvent) 
 }
 
 /// Show the main window if hidden, hide it if visible — backing the menu's
-/// "Show / Hide Dogger" entry.
+/// "Show / Hide Dashboard" entry.
 pub(crate) fn toggle_main_window<R: Runtime>(app: &AppHandle<R>) {
     let Some(window) = app.get_webview_window("main") else {
         return;
