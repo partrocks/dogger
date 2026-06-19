@@ -1,0 +1,86 @@
+name: Release
+
+# Runs on every push to main, but only builds + publishes when the version in
+# package.json has been bumped (i.e. no matching vX.Y.Z tag exists yet).
+# Normal commits are no-ops; `make bump` is what cuts a release.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - id: check
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "Tag v$VERSION already exists — nothing to release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "New version v$VERSION — will build and release."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  release:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: macos-latest # Apple Silicon
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # Builds the unsigned .dmg, creates the vX.Y.Z tag, and publishes a
+      # GitHub Release with the bundle attached. No APPLE_* secrets are set,
+      # so the app is unsigned (ad-hoc signed) — see README install notes.
+      - name: Build and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: Dogger v__VERSION__
+          releaseBody: |
+            Unsigned macOS build for Apple Silicon.
+
+            Install with Homebrew:
+            `brew install --cask partrocks/tap/dogger --no-quarantine`
+
+            Or download the `.dmg` below, then clear the quarantine flag:
+            `xattr -dr com.apple.quarantine /Applications/Dogger.app`
+          releaseDraft: false
+          prerelease: false
+          args: --target aarch64-apple-darwin

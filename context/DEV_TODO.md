@@ -1,11 +1,11 @@
 # Dogger — Distribution / Infra TODO
 
-Things to build *outside* the app to ship Dogger publicly.
+Things to build _outside_ the app to ship Dogger publicly.
 Keep this list simple and tick items off as they're done.
 
 ## Status
 
-- [ ] Release pipeline (build unsigned `.dmg`, publish GitHub Release)
+- [ ] First release verified (push a bump, confirm `.dmg` is published)
 - [ ] Homebrew tap repo
 - [ ] Install script (`install.sh`)
 - [ ] Website (`dogger.app`)
@@ -17,38 +17,27 @@ Keep this list simple and tick items off as they're done.
 
 ---
 
-## 1. Release pipeline (GitHub Actions)
+## 1. Verify the release pipeline
 
-One workflow in `.github/workflows/release.yml`, triggered on push to `main`:
+The workflow (`.github/workflows/release.yml`) and permissions are set up. Confirm
+it actually works end to end:
 
-- Read the version from the repo. If a `vX.Y.Z` tag already exists, do nothing
-  (so only an actual version bump cuts a release).
-- Otherwise build the `aarch64-apple-darwin` `.dmg`, create the `vX.Y.Z` tag, and
-  publish a GitHub Release with the `.dmg` attached.
+- `make bump` → `git push` → watch the Actions tab.
+- A new release `vX.Y.Z` with a `.dmg` asset should appear.
 
-Version bumping is **manual and self-disciplined** (done — `scripts/bump.sh` +
-Makefile targets):
+Optional: add a `check.yml` that runs `make check` on push for a quick green/red
+signal (safety net, not a merge gate).
 
-- `make bump` / `make bump-patch`
-- `make bump-minor`
-- `make bump-major`
+## 2. Homebrew tap repo
 
-Each updates all version files together (`package.json`, `tauri.conf.json`,
-`Cargo.toml`, `Cargo.lock`) and commits. Push to `main` → release fires.
-
-Optional: a `check.yml` that runs `make check` on push for a quick green/red
-signal (no longer a merge gate, just a safety net).
-
-## 3. Homebrew tap repo
-
-A separate public GitHub repo named `**homebrew-tap`** under `partrocks`.
+A separate public GitHub repo named **`homebrew-tap`** under `partrocks`.
 
 - Contains `Casks/dogger.rb` pointing at the latest release `.dmg` + its SHA256.
 - Install command for users: `brew install --cask partrocks/tap/dogger --no-quarantine`.
 - **Automate it:** have `release.yml` update the cask's `version` + `sha256` and push
-to the tap repo on each release.
+  to the tap repo on each release.
 
-## 4. Install script (`install.sh`)
+## 3. Install script (`install.sh`)
 
 A shell script hosted at `https://dogger.app/install.sh`.
 
@@ -57,7 +46,7 @@ A shell script hosted at `https://dogger.app/install.sh`.
 - Run `xattr -dr com.apple.quarantine /Applications/Dogger.app`.
 - Used by: `curl -fsSL https://dogger.app/install.sh | bash`.
 
-## 5. Website (`dogger.app`)
+## 4. Website (`dogger.app`)
 
 Public landing + download page.
 
@@ -66,7 +55,7 @@ Public landing + download page.
 - A stable "Download" button linking to the latest GitHub release.
 - Host `install.sh` here.
 
-## 6. Apple Developer ID (later)
+## 5. Apple Developer ID (later)
 
 Only needed for a true zero-friction install (no quarantine flag) and for a
 non-developer audience.
@@ -75,6 +64,5 @@ non-developer audience.
 - Create a **Developer ID Application** certificate.
 - Notarize the `.dmg` in `release.yml` via `notarytool`.
 - Add secrets: `APPLE_CERTIFICATE`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`,
-`APPLE_PASSWORD`, `APPLE_TEAM_ID` — Tauri picks these up automatically.
+  `APPLE_PASSWORD`, `APPLE_TEAM_ID` — Tauri picks these up automatically.
 - The code is already kept signing-compliant, so this is config only.
-
