@@ -351,6 +351,10 @@ code, pre, .mono {
   padding: 24px;
   display: flex;
   flex-direction: column;
+  /* Let the grid track shrink below the code block's min-content width
+     so the long install commands scroll inside the <pre> instead of
+     overflowing the page. */
+  min-width: 0;
 }
 
 .install-card-head {
@@ -382,6 +386,7 @@ code, pre, .mono {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   margin-top: auto;
+  min-width: 0;
 }
 
 .code-block pre {
