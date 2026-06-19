@@ -77,7 +77,7 @@ jobs:
             Unsigned macOS build for Apple Silicon.
 
             Install with Homebrew:
-            `brew install --cask partrocks/tap/dogger --no-quarantine`
+            `brew install --cask partrocks/tap/dogger`
 
             Or download the `.dmg` below, then clear the quarantine flag:
             `xattr -dr com.apple.quarantine /Applications/Dogger.app`

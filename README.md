@@ -22,14 +22,13 @@ Developers accumulate scripts that need to run *inside* a specific container, fr
 
 Dogger is a macOS app for **Apple Silicon** (M1 or newer).
 
-> **Note:** Dogger is not yet signed with an Apple Developer ID, so macOS Gatekeeper
-> would normally block a plain `.dmg` download. Both install methods below handle
-> this for you by removing the download quarantine flag.
+> **Note:** Dogger is not yet signed with an Apple Developer ID. The Homebrew cask
+> clears quarantine on install; manual installs need the `xattr` step below.
 
 ### Homebrew (recommended)
 
 ```bash
-brew install --cask partrocks/tap/dogger --no-quarantine
+brew install --cask partrocks/tap/dogger
 ```
 
 Upgrade later with:

@@ -21,7 +21,7 @@ Keep this list simple and tick items off as they're done.
 A separate public GitHub repo named **`homebrew-tap`** under `partrocks`.
 
 - Contains `Casks/dogger.rb` pointing at the latest release `.dmg` + its SHA256.
-- Install command for users: `brew install --cask partrocks/tap/dogger --no-quarantine`.
+- Install command for users: `brew install --cask partrocks/tap/dogger` (cask strips quarantine via `postflight`).
 - **Automate it:** have `release.yml` update the cask's `version` + `sha256` and push
   to the tap repo on each release.
 
@@ -45,7 +45,7 @@ Public landing + download page.
 
 ## 4. Apple Developer ID (later)
 
-Only needed for a true zero-friction install (no quarantine flag) and for a
+Only needed for a true zero-friction install (no manual `xattr`) and for a
 non-developer audience.
 
 - Apple Developer Program: $99/yr.
