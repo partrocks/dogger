@@ -18,6 +18,44 @@ Developers accumulate scripts that need to run *inside* a specific container, fr
 - **Menu bar app** — Tray icon with quick access to online projects and tasks; optional launch-at-login and background startup.
 - **Runner windows** — Launch a compact runner for any task directly from the tray.
 
+## Install
+
+Dogger is a macOS app for **Apple Silicon** (M1 or newer).
+
+> **Note:** Dogger is not yet signed with an Apple Developer ID, so macOS Gatekeeper
+> would normally block a plain `.dmg` download. Both install methods below handle
+> this for you by removing the download quarantine flag.
+
+### Homebrew (recommended)
+
+```bash
+brew install --cask partrocks/tap/dogger --no-quarantine
+```
+
+Upgrade later with:
+
+```bash
+brew upgrade --cask dogger
+```
+
+### Install script
+
+```bash
+curl -fsSL https://dogger.app/install.sh | bash
+```
+
+This downloads the latest release, installs **Dogger.app** into `/Applications`, and
+clears the quarantine flag so it opens normally.
+
+### Manual download
+
+Grab the `.dmg` from the [latest GitHub release](https://github.com/partrocks/dogger/releases/latest),
+drag **Dogger** to `/Applications`, then clear the quarantine flag once:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Dogger.app
+```
+
 ## Requirements
 
 - **macOS** (primary target; Tauri also bundles for other platforms)
