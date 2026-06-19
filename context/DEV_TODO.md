@@ -5,7 +5,6 @@ Keep this list simple and tick items off as they're done.
 
 ## Status
 
-- [ ] First release verified (push a bump, confirm `.dmg` is published)
 - [ ] Homebrew tap repo
 - [ ] Install script (`install.sh`)
 - [ ] Website (`doggerapp.com`)
@@ -17,18 +16,7 @@ Keep this list simple and tick items off as they're done.
 
 ---
 
-## 1. Verify the release pipeline
-
-The workflow (`.github/workflows/release.yml`) and permissions are set up. Confirm
-it actually works end to end:
-
-- `make bump` → `git push` → watch the Actions tab.
-- A new release `vX.Y.Z` with a `.dmg` asset should appear.
-
-Optional: add a `check.yml` that runs `make check` on push for a quick green/red
-signal (safety net, not a merge gate).
-
-## 2. Homebrew tap repo
+## 1. Homebrew tap repo
 
 A separate public GitHub repo named **`homebrew-tap`** under `partrocks`.
 
@@ -37,7 +25,7 @@ A separate public GitHub repo named **`homebrew-tap`** under `partrocks`.
 - **Automate it:** have `release.yml` update the cask's `version` + `sha256` and push
   to the tap repo on each release.
 
-## 3. Install script (`install.sh`)
+## 2. Install script (`install.sh`)
 
 A shell script hosted at `https://doggerapp.com/install.sh`.
 
@@ -46,7 +34,7 @@ A shell script hosted at `https://doggerapp.com/install.sh`.
 - Run `xattr -dr com.apple.quarantine /Applications/Dogger.app`.
 - Used by: `curl -fsSL https://doggerapp.com/install.sh | bash`.
 
-## 4. Website (`doggerapp.com`)
+## 3. Website (`doggerapp.com`)
 
 Public landing + download page.
 
@@ -55,7 +43,7 @@ Public landing + download page.
 - A stable "Download" button linking to the latest GitHub release.
 - Host `install.sh` here.
 
-## 5. Apple Developer ID (later)
+## 4. Apple Developer ID (later)
 
 Only needed for a true zero-friction install (no quarantine flag) and for a
 non-developer audience.
