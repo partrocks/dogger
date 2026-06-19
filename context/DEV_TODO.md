@@ -45,11 +45,11 @@ If the secret is missing, the release still succeeds but the tap is not updated.
 
 ## 1. Install script (`install.sh`)
 
-A shell script hosted at `https://doggerapp.com/install.sh`.
+Script lives in **`dogger/scripts/install.sh`**. Host it at `https://doggerapp.com/install.sh`.
 
-- Download the latest `.dmg` from the GitHub release.
-- Mount it, copy `Dogger.app` to `/Applications`, unmount.
-- Run `xattr -dr com.apple.quarantine /Applications/Dogger.app`.
+- Fetches the latest release from GitHub (`partrocks/dogger`).
+- Downloads the Apple Silicon `.dmg`, copies **Dogger.app** to `/Applications`.
+- Strips quarantine so the unsigned app opens.
 - Used by: `curl -fsSL https://doggerapp.com/install.sh | bash`.
 
 ## 2. Website (`doggerapp.com`)
