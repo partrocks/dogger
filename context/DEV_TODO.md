@@ -5,7 +5,6 @@ Keep this list simple and tick items off as they're done.
 
 ## Status
 
-- [ ] Homebrew tap repo
 - [ ] Install script (`install.sh`)
 - [ ] Website (`doggerapp.com`)
 - [ ] Apple Developer ID (later — only when going beyond a dev audience)
@@ -16,16 +15,35 @@ Keep this list simple and tick items off as they're done.
 
 ---
 
-## 1. Homebrew tap repo
+## Release workflow (dogger repo)
 
-A separate public GitHub repo named **`homebrew-tap`** under `partrocks`.
+After `make bump` + `git push`, GitHub Actions:
 
-- Contains `Casks/dogger.rb` pointing at the latest release `.dmg` + its SHA256.
-- Install command for users: `brew install --cask partrocks/tap/dogger` (cask strips quarantine via `postflight`).
-- **Automate it:** have `release.yml` update the cask's `version` + `sha256` and push
-  to the tap repo on each release.
+1. Builds the `.dmg` and publishes `vX.Y.Z` on GitHub Releases.
+2. Updates `partrocks/homebrew-tap` (`version` + `sha256` in `Casks/dogger.rb`).
 
-## 2. Install script (`install.sh`)
+You only need the bump + push — no manual tap update.
+
+### One-time: `HOMEBREW_TAP_TOKEN` secret
+
+The default `GITHUB_TOKEN` cannot push to another repo. Add a PAT so the release
+workflow can update the tap.
+
+1. GitHub → **Settings** (your account) → **Developer settings** →
+   **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
+2. **Resource owner:** `partrocks` (or your user, if the tap is under your account).
+3. **Repository access:** Only select repositories → **`homebrew-tap`**.
+4. **Permissions:** Repository permissions → **Contents** → **Read and write**.
+5. Generate and copy the token.
+6. Open **`partrocks/dogger`** → **Settings** → **Secrets and variables** →
+   **Actions** → **New repository secret**.
+7. Name: **`HOMEBREW_TAP_TOKEN`**, value: paste the token.
+
+If the secret is missing, the release still succeeds but the tap is not updated.
+
+---
+
+## 1. Install script (`install.sh`)
 
 A shell script hosted at `https://doggerapp.com/install.sh`.
 
@@ -34,7 +52,7 @@ A shell script hosted at `https://doggerapp.com/install.sh`.
 - Run `xattr -dr com.apple.quarantine /Applications/Dogger.app`.
 - Used by: `curl -fsSL https://doggerapp.com/install.sh | bash`.
 
-## 3. Website (`doggerapp.com`)
+## 2. Website (`doggerapp.com`)
 
 Public landing + download page.
 
@@ -43,7 +61,7 @@ Public landing + download page.
 - A stable "Download" button linking to the latest GitHub release.
 - Host `install.sh` here.
 
-## 4. Apple Developer ID (later)
+## 3. Apple Developer ID (later)
 
 Only needed for a true zero-friction install (no manual `xattr`) and for a
 non-developer audience.

@@ -67,6 +67,7 @@ jobs:
       # GitHub Release with the bundle attached. No APPLE_* secrets are set,
       # so the app is unsigned (ad-hoc signed) — see README install notes.
       - name: Build and publish release
+        id: tauri
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -84,3 +85,40 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: --target aarch64-apple-darwin
+
+      # Push version + sha256 to partrocks/homebrew-tap (needs HOMEBREW_TAP_TOKEN).
+      - name: Update Homebrew cask
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          if [ -z "${HOMEBREW_TAP_TOKEN}" ]; then
+            echo "HOMEBREW_TAP_TOKEN not set — skipping tap update."
+            exit 0
+          fi
+
+          DMG="src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/Dogger_${VERSION}_aarch64.dmg"
+          if [ ! -f "$DMG" ]; then
+            DMG=$(find src-tauri/target -name "Dogger_${VERSION}_aarch64.dmg" -print -quit)
+          fi
+          if [ -z "$DMG" ] || [ ! -f "$DMG" ]; then
+            echo "error: could not find Dogger_${VERSION}_aarch64.dmg after build" >&2
+            exit 1
+          fi
+
+          SHA=$(shasum -a 256 "$DMG" | awk '{print $1}')
+          echo "Updating homebrew-tap to dogger ${VERSION} (${SHA})"
+
+          git clone --depth 1 \
+            "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/partrocks/homebrew-tap.git" \
+            homebrew-tap
+
+          CASK="homebrew-tap/Casks/dogger.rb"
+          perl -i -pe 's/^(\s*version\s+)"[^"]*"/${1}"'"${VERSION}"'"/' "$CASK"
+          perl -i -pe 's/^(\s*sha256\s+)"[^"]*"/${1}"'"${SHA}"'"/' "$CASK"
+
+          git -C homebrew-tap config user.name "github-actions[bot]"
+          git -C homebrew-tap config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C homebrew-tap add Casks/dogger.rb
+          git -C homebrew-tap commit -m "dogger ${VERSION}"
+          git -C homebrew-tap push origin main
