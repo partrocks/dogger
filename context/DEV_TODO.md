@@ -8,7 +8,7 @@ Keep this list simple and tick items off as they're done.
 - [ ] First release verified (push a bump, confirm `.dmg` is published)
 - [ ] Homebrew tap repo
 - [ ] Install script (`install.sh`)
-- [ ] Website (`dogger.app`)
+- [ ] Website (`doggerapp.com`)
 - [ ] Apple Developer ID (later — only when going beyond a dev audience)
 
 > **Branch protection: skipped.** Rulesets on a private repo are a paid feature,
@@ -39,18 +39,18 @@ A separate public GitHub repo named **`homebrew-tap`** under `partrocks`.
 
 ## 3. Install script (`install.sh`)
 
-A shell script hosted at `https://dogger.app/install.sh`.
+A shell script hosted at `https://doggerapp.com/install.sh`.
 
 - Download the latest `.dmg` from the GitHub release.
 - Mount it, copy `Dogger.app` to `/Applications`, unmount.
 - Run `xattr -dr com.apple.quarantine /Applications/Dogger.app`.
-- Used by: `curl -fsSL https://dogger.app/install.sh | bash`.
+- Used by: `curl -fsSL https://doggerapp.com/install.sh | bash`.
 
-## 4. Website (`dogger.app`)
+## 4. Website (`doggerapp.com`)
 
 Public landing + download page.
 
-- Buy the `dogger.app` domain.
+- Domain registered: `doggerapp.com`.
 - Pages: what Dogger is, screenshots, install instructions (Homebrew + curl + dmg).
 - A stable "Download" button linking to the latest GitHub release.
 - Host `install.sh` here.

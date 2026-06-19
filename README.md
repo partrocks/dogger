@@ -41,7 +41,7 @@ brew upgrade --cask dogger
 ### Install script
 
 ```bash
-curl -fsSL https://dogger.app/install.sh | bash
+curl -fsSL https://doggerapp.com/install.sh | bash
 ```
 
 This downloads the latest release, installs **Dogger.app** into `/Applications`, and
