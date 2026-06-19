@@ -4,6 +4,10 @@
 
 Dogger is a macOS desktop app for organising and running reusable shell-script tasks inside Docker containers. It gives one-off scripts — migrations, seeders, builds, codegen, and the like — a structured home: a per-project library you can run with one click from the menu bar or the main dashboard.
 
+<p align="center">
+  <img src="assets/demo.svg" alt="Dogger demo — picking a task and running its main.sh inside a Docker container with live output" width="760" />
+</p>
+
 ## Why Dogger?
 
 Developers accumulate scripts that need to run *inside* a specific container, from a specific working directory, against a specific codebase. Dogger keeps those scripts organised without touching your project files. All task definitions and run history live in `~/.dogger`; your repository stays read-only.

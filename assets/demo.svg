@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" width="960" height="600" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" role="img" aria-label="Animated demo of Dogger running a task inside a Docker container">
+  <defs>
+    <filter id="winShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#0b0c0f" flood-opacity="0.35"/>
+    </filter>
+    <clipPath id="winClip">
+      <rect x="20" y="14" width="920" height="572" rx="14"/>
+    </clipPath>
+    <clipPath id="outClip">
+      <rect x="226" y="176" width="508" height="250" rx="6"/>
+    </clipPath>
+  </defs>
+
+  <!-- canvas backdrop -->
+  <rect x="0" y="0" width="960" height="600" fill="#0e0f12"/>
+
+  <!-- window -->
+  <rect x="20" y="14" width="920" height="572" rx="14" fill="#f7f7f8" filter="url(#winShadow)"/>
+
+  <g clip-path="url(#winClip)">
+    <!-- app background -->
+    <rect x="20" y="14" width="920" height="572" fill="#f7f7f8"/>
+
+    <!-- titlebar -->
+    <rect x="20" y="14" width="920" height="34" fill="#1d1f23"/>
+    <circle cx="40" cy="31" r="6" fill="#ff5f57"/>
+    <circle cx="60" cy="31" r="6" fill="#febc2e"/>
+    <circle cx="80" cy="31" r="6" fill="#28c840"/>
+    <text x="480" y="35" text-anchor="middle" fill="#9aa0a6" font-size="12" font-weight="600">Dogger</text>
+
+    <!-- sidebar -->
+    <rect x="20" y="48" width="216" height="538" fill="#1d1f23"/>
+
+    <!-- brand mark (Dogger logo) -->
+    <g transform="translate(38,64) scale(0.020)">
+      <rect width="1000" height="1000" rx="220" fill="#16171a"/>
+      <g transform="translate(62.5,817.3) scale(0.1,-0.1)">
+        <path d="M2400 5523 c122 -24 282 -143 357 -266 34 -56 36 -58 57 -42 11 8 28 18 36 21 8 3 42 19 75 34 33 15 85 38 115 50 30 12 70 28 88 36 18 8 41 14 52 14 10 0 22 5 25 10 3 6 18 10 33 10 15 1 38 7 52 15 14 8 36 14 49 15 14 0 38 4 55 9 74 23 168 41 316 60 41 6 93 15 115 20 139 34 1019 32 1106 -3 9 -4 49 -11 90 -17 177 -23 197 -26 208 -33 6 -4 32 -11 59 -16 102 -19 147 -31 156 -40 6 -6 25 -10 42 -10 18 0 36 -4 39 -10 3 -5 14 -10 23 -10 9 0 30 -7 46 -15 15 -8 35 -15 42 -15 8 0 22 -4 32 -10 9 -5 35 -16 57 -26 69 -28 110 -49 113 -56 2 -5 11 -8 21 -8 9 0 22 -5 29 -12 6 -6 13 -10 15 -7 2 2 24 32 50 65 86 114 177 179 304 218 69 21 296 22 333 1 14 -8 35 -14 47 -15 26 0 125 -51 212 -110 89 -59 267 -242 350 -359 80 -111 181 -304 181 -344 0 -9 5 -19 10 -22 6 -3 10 -16 10 -28 0 -12 7 -31 15 -41 8 -11 15 -34 15 -52 0 -18 5 -36 10 -39 6 -3 10 -23 10 -44 0 -20 7 -61 16 -91 13 -42 15 -86 11 -224 -5 -155 -12 -211 -46 -351 -15 -63 -57 -175 -69 -187 -7 -7 -12 -17 -12 -23 0 -22 -65 -141 -117 -216 -38 -54 -41 -91 -22 -257 17 -146 -3 -366 -51 -562 -23 -92 -43 -157 -56 -182 -8 -14 -14 -33 -14 -42 0 -16 -3 -24 -34 -83 -9 -17 -16 -38 -16 -46 0 -9 -3 -17 -7 -19 -5 -1 -21 -28 -37 -58 -52 -101 -64 -121 -129 -220 -117 -175 -374 -425 -582 -565 -33 -22 -61 -43 -63 -47 -2 -5 -8 -8 -14 -8 -6 0 -26 -11 -44 -25 -18 -14 -38 -25 -45 -25 -7 0 -20 -6 -28 -14 -25 -22 -190 -103 -321 -157 -14 -6 -38 -17 -53 -25 -16 -8 -35 -14 -43 -14 -8 0 -22 -4 -32 -9 -26 -13 -84 -32 -112 -38 -14 -2 -34 -8 -45 -12 -28 -12 -102 -31 -155 -41 -25 -5 -76 -16 -115 -25 -38 -8 -102 -19 -141 -24 -39 -4 -76 -11 -82 -15 -27 -16 -302 -31 -597 -31 -310 0 -553 14 -625 35 -19 5 -53 10 -74 10 -22 0 -53 4 -70 9 -17 5 -56 14 -86 21 -86 17 -130 27 -195 45 -33 9 -73 19 -90 22 -16 3 -39 12 -50 19 -11 8 -29 14 -42 14 -12 0 -25 5 -28 10 -3 6 -16 10 -29 10 -12 0 -31 7 -42 15 -10 8 -27 15 -37 15 -9 0 -25 4 -35 10 -9 5 -35 16 -57 26 -53 22 -281 136 -325 163 -19 11 -42 24 -50 28 -17 8 -132 84 -140 93 -3 3 -18 14 -35 25 -107 67 -326 274 -430 405 -67 84 -125 166 -125 176 0 4 -6 15 -14 23 -8 9 -26 39 -42 66 -15 28 -36 64 -46 80 -10 17 -21 37 -24 45 -3 8 -10 26 -16 40 -5 14 -16 38 -24 53 -8 16 -14 35 -14 43 0 8 -4 22 -9 32 -24 48 -41 95 -41 115 0 13 -4 27 -9 33 -11 11 -29 91 -41 184 -5 36 -13 83 -19 105 -14 52 -14 429 0 478 9 34 7 41 -21 82 -17 25 -51 89 -76 143 -25 53 -50 105 -55 114 -5 10 -9 24 -9 32 0 7 -7 27 -15 42 -8 16 -15 39 -15 51 0 12 -4 25 -10 28 -5 3 -10 19 -10 35 0 16 -5 41 -11 57 -21 51 -31 156 -36 358 -5 192 2 280 28 380 6 22 13 57 16 78 3 20 9 40 14 43 5 3 9 16 9 29 0 13 6 36 14 52 41 81 66 136 66 144 0 6 8 22 19 37 10 15 36 54 57 86 87 132 348 369 454 412 71 29 87 36 102 44 10 6 30 10 45 10 16 0 35 5 43 11 17 11 186 6 260 -8z" fill="#ffffff"/>
+        <path d="M3188 4073 c41 -13 70 -32 109 -71 29 -29 53 -61 53 -72 0 -10 5 -22 10 -25 21 -13 11 -112 -16 -162 -53 -101 -120 -143 -226 -143 -74 0 -110 15 -167 68 -68 65 -90 136 -70 230 9 47 19 64 63 106 34 33 70 57 102 67 64 22 77 22 142 2z m2527 -7 c61 -22 137 -94 158 -152 22 -64 22 -105 -3 -159 -49 -107 -123 -155 -239 -155 -110 0 -187 47 -229 139 -26 59 -33 144 -13 164 6 6 11 19 11 28 0 30 104 122 152 135 60 16 116 16 163 0z m-1132 -695 c54 -23 85 -56 104 -108 15 -45 17 -109 3 -118 -5 -3 -10 -14 -10 -24 0 -23 -47 -74 -87 -94 -43 -20 -205 -31 -327 -22 -108 8 -145 25 -180 85 -25 45 -28 141 -4 190 46 96 121 121 334 114 92 -2 132 -8 167 -23z" fill="#16171a"/>
+      </g>
+    </g>
+    <text x="68" y="81" fill="#e8e9ec" font-size="15" font-weight="700">Dogger</text>
+
+    <!-- projects label -->
+    <text x="38" y="121" fill="#6b7280" font-size="10" font-weight="700" letter-spacing="1.4">PROJECTS</text>
+    <path d="M210 111 v12 M204 117 h12" stroke="#9aa0a6" stroke-width="1.6" stroke-linecap="round"/>
+
+    <!-- active project -->
+    <rect x="30" y="132" width="196" height="46" rx="9" fill="#2a2d33"/>
+    <circle cx="48" cy="151" r="4" fill="#28c840"/>
+    <text x="60" y="155" fill="#ffffff" font-size="13" font-weight="700">acme-api</text>
+    <text x="60" y="170" fill="#9aa0a6" font-size="11">3 tasks</text>
+
+    <!-- other projects -->
+    <circle cx="48" cy="200" r="4" fill="#9aa0a6"/>
+    <text x="60" y="204" fill="#c7cace" font-size="13">billing-worker</text>
+    <circle cx="48" cy="236" r="4" fill="#9aa0a6"/>
+    <text x="60" y="240" fill="#c7cace" font-size="13">web-frontend</text>
+
+    <!-- settings -->
+    <circle cx="46" cy="558" r="6.5" fill="none" stroke="#9aa0a6" stroke-width="1.6"/>
+    <circle cx="46" cy="558" r="2" fill="#9aa0a6"/>
+    <text x="60" y="562" fill="#9aa0a6" font-size="13">Settings</text>
+
+    <!-- main: project header -->
+    <text x="260" y="86" fill="#1d1f23" font-size="22" font-weight="700">acme-api</text>
+    <rect x="372" y="70" width="78" height="22" rx="11" fill="#28c840" fill-opacity="0.16"/>
+    <circle cx="386" cy="81" r="3.5" fill="#28c840"/>
+    <text x="395" y="85" fill="#1f9b3a" font-size="12" font-weight="600">Online</text>
+    <rect x="812" y="69" width="100" height="26" rx="8" fill="#ffffff" stroke="#e3e4e8"/>
+    <text x="862" y="86" text-anchor="middle" fill="#1d1f23" font-size="12" font-weight="600">Configure</text>
+
+    <!-- config rows -->
+    <text x="260" y="124" fill="#6b7280" font-size="11">Container working dir</text>
+    <text x="430" y="124" fill="#1d1f23" font-size="12" font-family="'SFMono-Regular', ui-monospace, Menlo, monospace">/var/www/html</text>
+    <text x="260" y="148" fill="#6b7280" font-size="11">Container</text>
+    <rect x="430" y="136" width="92" height="20" rx="10" fill="#eef1ff"/>
+    <circle cx="443" cy="146" r="3.5" fill="#28c840"/>
+    <text x="452" y="150" fill="#3a55c0" font-size="11" font-family="'SFMono-Regular', ui-monospace, Menlo, monospace">api</text>
+
+    <line x1="260" y1="168" x2="916" y2="168" stroke="#e3e4e8"/>
+
+    <!-- tasks section -->
+    <text x="260" y="194" fill="#1d1f23" font-size="15" font-weight="700">Tasks</text>
+    <rect x="816" y="180" width="96" height="26" rx="8" fill="#ffffff" stroke="#e3e4e8"/>
+    <text x="864" y="197" text-anchor="middle" fill="#1d1f23" font-size="12" font-weight="600">New task</text>
+
+    <!-- task row 1: migrate -->
+    <rect x="260" y="208" width="656" height="56" rx="10" fill="#ffffff" stroke="#e3e4e8"/>
+    <text x="278" y="232" fill="#1d1f23" font-size="14" font-weight="600">migrate</text>
+    <text x="278" y="250" fill="#6b7280" font-size="12" font-family="'SFMono-Regular', ui-monospace, Menlo, monospace">db/migrate/main.sh</text>
+    <rect x="820" y="222" width="80" height="28" rx="8" fill="#4f7cff"/>
+    <path d="M845 230 v12 l10 -6 z" fill="#ffffff"/>
+    <text x="860" y="240" fill="#ffffff" font-size="13" font-weight="600">Run</text>
+
+    <!-- task row 2: seed -->
+    <rect x="260" y="272" width="656" height="56" rx="10" fill="#ffffff" stroke="#e3e4e8"/>
+    <text x="278" y="296" fill="#1d1f23" font-size="14" font-weight="600">seed</text>
+    <text x="278" y="314" fill="#6b7280" font-size="12" font-family="'SFMono-Regular', ui-monospace, Menlo, monospace">db/seed/main.sh</text>
+    <rect x="820" y="286" width="80" height="28" rx="8" fill="#4f7cff"/>
+    <path d="M845 294 v12 l10 -6 z" fill="#ffffff"/>
+    <text x="860" y="304" fill="#ffffff" font-size="13" font-weight="600">Run</text>
+
+    <!-- task row 3: codegen -->
+    <rect x="260" y="336" width="656" height="56" rx="10" fill="#ffffff" stroke="#e3e4e8"/>
+    <text x="278" y="360" fill="#1d1f23" font-size="14" font-weight="600">codegen</text>
+    <text x="278" y="378" fill="#6b7280" font-size="12" font-family="'SFMono-Regular', ui-monospace, Menlo, monospace">gen/codegen.sh</text>
+    <rect x="820" y="350" width="80" height="28" rx="8" fill="#4f7cff"/>
+    <path d="M845 358 v12 l10 -6 z" fill="#ffffff"/>
+    <text x="860" y="368" fill="#ffffff" font-size="13" font-weight="600">Run</text>
+
+    <!-- click ripple on row 1 Run button -->
+    <circle cx="860" cy="236" r="3" fill="none" stroke="#4f7cff" stroke-width="2">
+      <animate attributeName="r" values="3;3;3;22;22" keyTimes="0;0.244;0.250;0.300;1" dur="9s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;0;0.85;0;0" keyTimes="0;0.244;0.250;0.300;1" dur="9s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- cursor -->
+    <g>
+      <animateTransform attributeName="transform" type="translate"
+        values="620,470; 620,470; 858,232; 858,232; 858,232; 620,470"
+        keyTimes="0;0.133;0.244;0.300;0.867;1" dur="9s" repeatCount="indefinite"/>
+      <path d="M0,0 L0,17 L4.5,12.8 L7.6,19 L10,17.9 L6.9,11.8 L12,11.8 Z" fill="#ffffff" stroke="#1d1f23" stroke-width="1.2" stroke-linejoin="round"/>
+    </g>
+
+    <!-- run modal overlay -->
+    <rect x="20" y="48" width="920" height="538" fill="#0f1115">
+      <animate attributeName="opacity" values="0;0;0.62;0.62;0;0" keyTimes="0;0.267;0.300;0.867;0.922;1" dur="9s" repeatCount="indefinite"/>
+    </rect>
+
+    <!-- run modal card -->
+    <g opacity="0">
+      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.267;0.300;0.867;0.922;1" dur="9s" repeatCount="indefinite"/>
+
+      <rect x="210" y="120" width="540" height="370" rx="14" fill="#ffffff" stroke="#e3e4e8"/>
+
+      <!-- head -->
+      <g opacity="1">
+        <animate attributeName="opacity" values="1;0" keyTimes="0;0.622" dur="9s" calcMode="discrete" repeatCount="indefinite"/>
+        <rect x="232" y="134" width="74" height="22" rx="11" fill="#4f7cff" fill-opacity="0.16"/>
+        <text x="269" y="149" text-anchor="middle" fill="#4f7cff" font-size="11" font-weight="700">Running</text>
+      </g>
+      <g opacity="0">
+        <animate attributeName="opacity" values="0;1" keyTimes="0;0.622" dur="9s" calcMode="discrete" repeatCount="indefinite"/>
+        <rect x="232" y="134" width="74" height="22" rx="11" fill="#28c840" fill-opacity="0.16"/>
+        <text x="269" y="149" text-anchor="middle" fill="#1f9b3a" font-size="11" font-weight="700">Success</text>
+      </g>
+      <text x="318" y="150" fill="#1d1f23" font-size="14" font-weight="600">migrate</text>
+      <text x="382" y="150" fill="#6b7280" font-size="11" font-family="'SFMono-Regular', ui-monospace, Menlo, monospace">api</text>
+      <path d="M716 138 l14 14 M730 138 l-14 14" stroke="#9aa0a6" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="226" y1="168" x2="734" y2="168" stroke="#e3e4e8"/>
+
+      <!-- output -->
+      <rect x="226" y="176" width="508" height="250" fill="#0f1115"/>
+      <g clip-path="url(#outClip)" font-family="'SFMono-Regular', ui-monospace, Menlo, monospace" font-size="12.5">
+        <text x="244" y="200" fill="#7f8694" opacity="0">$ ./main.sh
+          <animate attributeName="opacity" values="0;1" keyTimes="0;0.333" dur="9s" calcMode="discrete" repeatCount="indefinite"/>
+        </text>
+        <text x="244" y="221" fill="#d7dae0" opacity="0">Connecting to database ... ok
+          <animate attributeName="opacity" values="0;1" keyTimes="0;0.378" dur="9s" calcMode="discrete" repeatCount="indefinite"/>
+        </text>
+        <text x="244" y="242" fill="#d7dae0" opacity="0">Applying 20260619_add_users_table ... done
+          <animate attributeName="opacity" values="0;1" keyTimes="0;0.422" dur="9s" calcMode="discrete" repeatCount="indefinite"/>
+        </text>
+        <text x="244" y="263" fill="#d7dae0" opacity="0">Applying 20260619_add_email_index ... done
+          <animate attributeName="opacity" values="0;1" keyTimes="0;0.467" dur="9s" calcMode="discrete" repeatCount="indefinite"/>
+        </text>
+        <text x="244" y="284" fill="#d7dae0" opacity="0">Applying 20260620_backfill_status ... done
+          <animate attributeName="opacity" values="0;1" keyTimes="0;0.511" dur="9s" calcMode="discrete" repeatCount="indefinite"/>
+        </text>
+        <text x="244" y="305" fill="#d7dae0" opacity="0">Migrated 3 pending migrations.
+          <animate attributeName="opacity" values="0;1" keyTimes="0;0.556" dur="9s" calcMode="discrete" repeatCount="indefinite"/>
+        </text>
+        <g opacity="0">
+          <animate attributeName="opacity" values="0;1" keyTimes="0;0.600" dur="9s" calcMode="discrete" repeatCount="indefinite"/>
+          <path d="M244 322 l4 4 l8 -9" fill="none" stroke="#36c46b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="262" y="327" fill="#36c46b">Schema is up to date.</text>
+        </g>
+      </g>
+
+      <!-- foot -->
+      <line x1="226" y1="434" x2="734" y2="434" stroke="#e3e4e8"/>
+      <g opacity="1">
+        <animate attributeName="opacity" values="1;0" keyTimes="0;0.622" dur="9s" calcMode="discrete" repeatCount="indefinite"/>
+        <text x="244" y="466" fill="#6b7280" font-size="12">Running...</text>
+      </g>
+      <g opacity="0">
+        <animate attributeName="opacity" values="0;1" keyTimes="0;0.622" dur="9s" calcMode="discrete" repeatCount="indefinite"/>
+        <text x="244" y="466" fill="#6b7280" font-size="12">Completed successfully</text>
+      </g>
+      <rect x="636" y="450" width="80" height="28" rx="8" fill="#ffffff" stroke="#e3e4e8"/>
+      <text x="676" y="468" text-anchor="middle" fill="#1d1f23" font-size="13" font-weight="600">Close</text>
+    </g>
+  </g>
+</svg>
