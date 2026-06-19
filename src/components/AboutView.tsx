@@ -42,8 +42,8 @@ export function AboutView({ onClose }: { onClose: () => void }) {
                     </p>
                     <p className="about-author">
                         Made by Paul Rooney ·{" "}
-                        <a href="mailto:paul@happycoder.co.uk">
-                            paul@happycoder.co.uk
+                        <a href="mailto:dogger@happycoder.co.uk">
+                            dogger@happycoder.co.uk
                         </a>
                     </p>
                 </div>

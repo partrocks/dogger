@@ -157,6 +157,6 @@ Project context and architecture notes live in [`context/`](context/) for contri
 
 ## License
 
-[GPL-3.0-or-later](LICENSE) — Copyright © 2026 PartRocks, Happy Coder.
+[MIT](LICENSE) — Copyright © 2026 PartRocks, Happy Coder.
 
-Made by [Paul Rooney](mailto:paul@happycoder.co.uk).
+Made by [Paul Rooney](mailto:dogger@happycoder.co.uk).

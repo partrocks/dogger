@@ -45,7 +45,7 @@ If the secret is missing, the release still succeeds but the tap is not updated.
 
 ## 1. Install script (`install.sh`)
 
-Script lives in **`dogger/scripts/install.sh`**. Host it at `https://doggerapp.com/install.sh`.
+Script lives in **`dogger/website/install.sh`** (deployed with the site). Host it at `https://doggerapp.com/install.sh`.
 
 - Fetches the latest release from GitHub (`partrocks/dogger`).
 - Downloads the Apple Silicon `.dmg`, copies **Dogger.app** to `/Applications`.

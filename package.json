@@ -2,7 +2,7 @@
   "name": "dogger",
   "private": true,
   "version": "0.1.2",
-  "license": "GPL-3.0-or-later",
+  "license": "MIT",
   "author": "Paul Rooney <paulroon@gmail.com>",
   "type": "module",
   "scripts": {

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dogger — Your Development Docker Dog</title>
+  <meta name="description" content="Dogger is a friendly macOS menu bar app for organising and running reusable shell-script tasks inside your Docker containers." />
+
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="canonical" href="https://doggerapp.com/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Dogger — Your Development Docker Dog" />
+  <meta property="og:description" content="Organise and run reusable shell-script tasks inside your Docker containers — from the menu bar." />
+  <meta property="og:url" content="https://doggerapp.com/" />
+  <meta property="og:image" content="https://doggerapp.com/assets/screenshots/project_view001.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="#top" aria-label="Dogger home">
+        <img src="assets/logo.svg" alt="" width="28" height="28" />
+        <span>Dogger</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#features">Features</a>
+        <a href="#screens">Screens</a>
+        <a href="#install">Install</a>
+        <a href="#contact">Contact</a>
+        <a class="nav-gh" href="https://github.com/partrocks/dogger" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-copy">
+          <span class="eyebrow"><span class="dot"></span> macOS · Apple Silicon · Free &amp; open source</span>
+          <h1>Your development<br />Docker dog.</h1>
+          <p class="lede">
+            Dogger gives your one-off scripts — migrations, seeders, builds, codegen — a
+            structured home. A per-project library you run with one click, right inside
+            your Docker containers, from the menu bar.
+          </p>
+
+          <div class="install-cta">
+            <div class="code-inline" data-copy="brew install --cask partrocks/tap/dogger">
+              <code><span class="prompt">$</span> brew install --cask partrocks/tap/dogger</code>
+              <button class="copy-btn" type="button" aria-label="Copy install command">Copy</button>
+            </div>
+          </div>
+
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#install">Install Dogger</a>
+            <a class="btn btn-ghost" href="https://github.com/partrocks/dogger" target="_blank" rel="noopener">View on GitHub</a>
+          </div>
+        </div>
+
+        <div class="hero-shot">
+          <img src="assets/screenshots/project_view001.png" alt="Dogger main window showing a project and its tasks" loading="eager" />
+        </div>
+      </div>
+    </section>
+
+    <!-- Trust strip -->
+    <section class="strip">
+      <div class="container strip-inner">
+        <span>Apple Silicon (M1+)</span>
+        <span>Runs your scripts in containers</span>
+        <span>Your repo stays read-only</span>
+        <span>Menu bar &amp; dashboard</span>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>Everything your scripts have been missing</h2>
+          <p>Dogger keeps your tasks organised without ever touching your project files. All definitions and run history live in <code>~/.dogger</code>.</p>
+        </div>
+
+        <div class="features-grid">
+          <article class="feature">
+            <div class="feature-icon">📁</div>
+            <h3>Projects &amp; tasks</h3>
+            <p>Group tasks by project, each tied to a Docker container and a container working directory.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">🐳</div>
+            <h3>Docker execution</h3>
+            <p>Run a task's <code>main.sh</code> inside a running container via <code>docker cp</code> + <code>docker exec</code>, with live stdout/stderr streaming.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">🐚</div>
+            <h3>Shell detection</h3>
+            <p>Probes the container for available shells and honours your script's shebang before running.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">✏️</div>
+            <h3>Task editor</h3>
+            <p>Edit <code>main.sh</code> and supporting files — PHP, Node, JSON, YAML — with syntax highlighting.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">✨</div>
+            <h3>AI task generation</h3>
+            <p>Describe a task in plain language and let Dogger scaffold the files by reading your codebase.</p>
+          </article>
+          <article class="feature">
+            <div class="feature-icon">🧭</div>
+            <h3>Menu bar app</h3>
+            <p>A tray icon with quick access to online projects and tasks, plus launch-at-login and background startup.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screenshots -->
+    <section id="screens" class="section section-alt">
+      <div class="container">
+        <div class="section-head">
+          <h2>A friendly home for your tasks</h2>
+          <p>Run from the dashboard or straight from the menu bar — and watch the output stream live.</p>
+        </div>
+
+        <div class="screens">
+          <figure class="screen screen-wide">
+            <img src="assets/screenshots/taskview001.png" alt="Dogger task editor with files and syntax highlighting" loading="lazy" />
+            <figcaption>Edit task files and run them with one click.</figcaption>
+          </figure>
+          <figure class="screen">
+            <img src="assets/screenshots/tray002.png" alt="Dogger menu bar panel listing online projects and tasks" loading="lazy" />
+            <figcaption>Quick access from the menu bar.</figcaption>
+          </figure>
+          <figure class="screen">
+            <img src="assets/screenshots/task_run001.png" alt="Dogger runner window showing successful migration output" loading="lazy" />
+            <figcaption>Live output and run history.</figcaption>
+          </figure>
+          <figure class="screen screen-wide">
+            <img src="assets/screenshots/ai_assistant001.png" alt="Dogger AI task generation reading the codebase and scaffolding files" loading="lazy" />
+            <figcaption>Describe it, and let the AI scaffold the task.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- Install -->
+    <section id="install" class="section">
+      <div class="container">
+        <div class="section-head">
+          <h2>Install Dogger</h2>
+          <p>macOS app for <strong>Apple Silicon</strong> (M1 or newer). Pick whichever you like.</p>
+        </div>
+
+        <div class="install-grid">
+          <article class="install-card">
+            <div class="install-card-head">
+              <h3>Homebrew</h3>
+              <span class="tag">Recommended</span>
+            </div>
+            <p>The cask clears quarantine for you on install.</p>
+            <div class="code-block" data-copy="brew install --cask partrocks/tap/dogger">
+              <pre><code><span class="prompt">$</span> brew install --cask partrocks/tap/dogger</code></pre>
+              <button class="copy-btn" type="button" aria-label="Copy command">Copy</button>
+            </div>
+            <p class="install-note">Upgrade later with <code>brew upgrade --cask dogger</code>.</p>
+          </article>
+
+          <article class="install-card">
+            <div class="install-card-head">
+              <h3>Install script</h3>
+            </div>
+            <p>Downloads the latest release, installs into <code>/Applications</code>, and clears quarantine.</p>
+            <div class="code-block" data-copy="curl -fsSL https://doggerapp.com/install.sh | bash">
+              <pre><code><span class="prompt">$</span> curl -fsSL https://doggerapp.com/install.sh | bash</code></pre>
+              <button class="copy-btn" type="button" aria-label="Copy command">Copy</button>
+            </div>
+          </article>
+
+          <article class="install-card">
+            <div class="install-card-head">
+              <h3>Manual download</h3>
+            </div>
+            <p>Grab the <code>.dmg</code>, drag <strong>Dogger</strong> to <code>/Applications</code>, then clear quarantine once:</p>
+            <div class="code-block" data-copy="xattr -dr com.apple.quarantine /Applications/Dogger.app">
+              <pre><code><span class="prompt">$</span> xattr -dr com.apple.quarantine /Applications/Dogger.app</code></pre>
+              <button class="copy-btn" type="button" aria-label="Copy command">Copy</button>
+            </div>
+            <p class="install-note"><a href="https://github.com/partrocks/dogger/releases/latest" target="_blank" rel="noopener">Download the latest release →</a></p>
+          </article>
+        </div>
+
+        <div class="callout">
+          <strong>Heads up:</strong> Dogger isn't signed with an Apple Developer ID yet. Homebrew and the install
+          script handle the quarantine flag automatically; manual installs need the <code>xattr</code> step above.
+        </div>
+
+        <div class="requirements">
+          <h3>Requirements</h3>
+          <ul>
+            <li><strong>macOS</strong> on Apple Silicon (M1 or newer)</li>
+            <li><strong>Docker</strong> — CLI installed and the daemon running. Dogger runs tasks in containers that are already up; it doesn't start or manage them.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact" class="section section-alt">
+      <div class="container">
+        <div class="section-head">
+          <h2>Say hello</h2>
+          <p>Questions, ideas, or a bug to report? We'd love to hear from you.</p>
+        </div>
+
+        <div class="contact-grid">
+          <a class="contact-card" href="mailto:dogger@happycoder.co.uk">
+            <div class="contact-icon">✉️</div>
+            <h3>Email</h3>
+            <p>dogger@happycoder.co.uk</p>
+          </a>
+          <a class="contact-card" href="https://github.com/partrocks/dogger" target="_blank" rel="noopener">
+            <div class="contact-icon">⌨️</div>
+            <h3>GitHub</h3>
+            <p>partrocks/dogger</p>
+          </a>
+          <a class="contact-card" href="https://github.com/partrocks/dogger/issues" target="_blank" rel="noopener">
+            <div class="contact-icon">🐛</div>
+            <h3>Report a bug</h3>
+            <p>Open an issue</p>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="assets/logo.svg" alt="" width="24" height="24" />
+        <span>Dogger</span>
+      </div>
+      <p class="footer-meta">
+        Made by <a href="mailto:dogger@happycoder.co.uk">Paul Rooney</a> ·
+        MIT License · © 2026 PartRocks, Happy Coder.
+      </p>
+    </div>
+  </footer>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
