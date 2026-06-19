@@ -27,6 +27,14 @@ BUMP="$1"
 command -v jq   >/dev/null || { echo "error: jq is required" >&2; exit 1; }
 command -v node >/dev/null || { echo "error: node is required" >&2; exit 1; }
 command -v perl >/dev/null || { echo "error: perl is required" >&2; exit 1; }
+command -v git  >/dev/null || { echo "error: git is required" >&2; exit 1; }
+
+# --- require a clean working tree --------------------------------------------
+if [ -n "$(git -C "$ROOT" status --porcelain)" ]; then
+  echo "error: working tree is dirty. Commit or stash your changes first." >&2
+  git -C "$ROOT" status --short >&2
+  exit 1
+fi
 
 # --- read current versions ----------------------------------------------------
 pkg_v=$(node -p "require('$PKG').version")
@@ -74,10 +82,14 @@ perl -i -pe 'if (!$d && /^version\s*=\s*"[^"]+"/) { s/"[^"]+"/"'"$NEW"'"/; $d=1 
 # Cargo.lock: the dogger package entry.
 perl -0777 -i -pe 's/(name = "dogger"\nversion = ")[^"]+(")/${1}'"$NEW"'${2}/' "$LOCK"
 
-echo "Updated:"
+# --- stage + commit -----------------------------------------------------------
+git -C "$ROOT" add "$PKG" "$ROOT/package-lock.json" "$CONF" "$CARGO" "$LOCK"
+git -C "$ROOT" commit -m "Bump version to v$NEW" >/dev/null
+
+echo "Committed version bump to v$NEW:"
 echo "  package.json, package-lock.json"
 echo "  src-tauri/tauri.conf.json"
 echo "  src-tauri/Cargo.toml"
 echo "  src-tauri/Cargo.lock"
 echo
-echo "Next: commit the change, open a PR, and merge to cut release v$NEW."
+echo "Next: push the branch, open a PR, and merge to cut release v$NEW."

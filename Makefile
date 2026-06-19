@@ -1,7 +1,7 @@
 # Dogger — developer Makefile
 # `make dev` is the canonical way to start the app locally.
 
-.PHONY: dev build check clean install clear-icon-cache bump-patch bump-minor bump-major check-version
+.PHONY: dev build check clean install clear-icon-cache bump bump-patch bump-minor bump-major check-version
 
 # Run the Tauri app locally (starts Vite + the desktop window).
 dev:
@@ -34,6 +34,9 @@ check-version:
 
 # Version bumps. Updates package.json, tauri.conf.json, Cargo.toml + Cargo.lock
 # together. Run on a branch, commit the change, then merge to cut a release.
+# `make bump` is shorthand for the most common case, a patch bump.
+bump: bump-patch
+
 bump-patch:
 	./scripts/bump.sh patch
 
