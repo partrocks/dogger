@@ -450,6 +450,23 @@ export function TaskDetail({
                                                 setContents(code);
                                                 setDirty(true);
                                             }}
+                                            onKeyDown={(e) => {
+                                                if (
+                                                    (e.metaKey || e.ctrlKey) &&
+                                                    !e.shiftKey &&
+                                                    !e.altKey &&
+                                                    e.key === "s"
+                                                ) {
+                                                    e.preventDefault();
+                                                    if (
+                                                        dirty &&
+                                                        !busy &&
+                                                        activeFile
+                                                    ) {
+                                                        save();
+                                                    }
+                                                }
+                                            }}
                                             highlight={(code) =>
                                                 highlightCode(code, activeFile)
                                             }
