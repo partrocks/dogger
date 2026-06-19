@@ -1,7 +1,7 @@
 # Dogger — developer Makefile
 # `make dev` is the canonical way to start the app locally.
 
-.PHONY: dev build check clean install clear-icon-cache
+.PHONY: dev build check clean install clear-icon-cache bump-patch bump-minor bump-major check-version
 
 # Run the Tauri app locally (starts Vite + the desktop window).
 dev:
@@ -25,6 +25,23 @@ clean:
 # Convenience: install JS dependencies.
 install:
 	npm install
+
+# Print the version recorded in each file (handy for spotting drift).
+check-version:
+	@printf '%-22s %s\n' "package.json:"    "$$(node -p "require('./package.json').version")"
+	@printf '%-22s %s\n' "tauri.conf.json:" "$$(jq -r .version src-tauri/tauri.conf.json)"
+	@printf '%-22s %s\n' "Cargo.toml:"      "$$(perl -ne 'if(/^version\s*=\s*\"([^\"]+)\"/){print $$1; exit}' src-tauri/Cargo.toml)"
+
+# Version bumps. Updates package.json, tauri.conf.json, Cargo.toml + Cargo.lock
+# together. Run on a branch, commit the change, then merge to cut a release.
+bump-patch:
+	./scripts/bump.sh patch
+
+bump-minor:
+	./scripts/bump.sh minor
+
+bump-major:
+	./scripts/bump.sh major
 
 # Force macOS to drop cached app icons, then restart Dock + Finder.
 # Run this after changing src-tauri/icons and rebuilding to see the new icon.
